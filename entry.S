@@ -4,8 +4,8 @@ _entry:
         # load address of stack_top to sp
         la sp, stack_top
         
-        # test 
-        call test
+        # jump into kernel code 
+        call kernel_main
 
 spin:
         j spin
