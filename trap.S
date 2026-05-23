@@ -3,3 +3,5 @@
 trap_vector:
     call trap_handler
     mret
+spin:
+    j spin

@@ -1,3 +1,7 @@
-li a7, 1
-li a0, ch
-ecall
+.section .text
+.global user_start
+user_start:
+    li a0, 8
+    ecall
+spin:
+    j spin
