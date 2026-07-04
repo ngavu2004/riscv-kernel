@@ -26,6 +26,9 @@ void kernel_main() {
         dst[i] = source[i];
     }
 
+    // allow U-mode to fetch and access the loaded image
+    enable_user_memory();
+
     // register trap vector
     void *trap_vector_ptr = &trap_vector;
     write_mtvec((uint64_t)trap_vector_ptr);
