@@ -1,23 +1,37 @@
 #include <stdint.h>
 #define MPP_BIT_POS 11
+#define USER_BASE_ADDRESS 0x80100000
+#define USER_SIZE 4096 // 4 KiB
 
 static inline void write_mtvec(uint64_t x) {
     __asm__ volatile("csrw mtvec, %0" : : "r"(x));
 }
 
 // Write to mepc
-// Note about mepc: when an interrupt occur
+// Note about mepc: when an interrupt occur, the interrupterd instruction address is saved to mepc
 static inline void write_mepc(uint64_t x) {
     __asm__ volatile("csrw mepc, %0" : : "r" (x));
 }
 
 static inline void enable_user_memory() {
+    // Note RISC-V pmpaddr0 and pmpcf0 config the entry Physical Memory Protection
+    // pmpcf0 decides the mode. The mode will decide the role of pmpaddr0
+    // In our case, pmpcf0 = 0x1f -> 0 0 0 1 1 1 1 1
+    // We have R: 1, W: 1, X: 1, and A = 11
+    // Since A = 11, the mode is NATO
+    // In this mode, the pmpaddr encodes both the base address and user size
+    // int pmpaddr = (USER_BASE_ADDRESS >> 2) | ((USER_SIZE / 8) - 1)
+    // why (USER_BASE_ADDRESS >> 2) you ask?
+    // Because in NATA mode, the pmpaddr is 4-byte aligned, which will always have 00 at the end
+    // So we always know the end is gonna be 00, then why wasting on the 00, shift them right by 2
+    // and later on we can restore them later
+    uint64_t pmpaddr = (USER_BASE_ADDRESS >> 2) | ((USER_SIZE / 8) - 1);
     __asm__ volatile(
-        "li t0, -1\n\t"
+        "mv t0, %0\n\t"
         "csrw pmpaddr0, t0\n\t"
         "li t0, 0x1f\n\t"
         "csrw pmpcfg0, t0"
-        : : : "t0"
+        : :"r"(pmpaddr) : "t0"
     );
 }
 
