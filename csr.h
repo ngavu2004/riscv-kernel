@@ -35,6 +35,10 @@ static inline void enable_user_memory() {
     );
 }
 
+// 
+// mpp: is 2 bits in mstatus that holds information about previous priviledge mode
+// This set mpp to 00, which means previous priviledge mode is U-mode, not S-mode
+// currently 
 static inline void clear_mpp() {
     __asm__ volatile(
         "csrr t0, mstatus\n\t"        // Read mstatus into register t0

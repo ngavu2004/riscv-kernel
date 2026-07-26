@@ -2,6 +2,7 @@
 #include "csr.h"
 
 void uart_putstr(const char*);
+void uart_putuint64(uint64_t num);
 
 // The basic things that a trap handler has to do:
 // 1. inspect the cause
@@ -11,7 +12,9 @@ void uart_putstr(const char*);
 void trap_handler() {
     uint64_t cause = read_mcause();
 
+    uart_putuint64(cause);
     uart_putstr("Trap handler called");
+    
     
     write_mepc(read_mepc() + 4);
 

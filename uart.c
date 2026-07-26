@@ -12,3 +12,23 @@ void uart_putstr(const char* s) {
         uart_putchar(*s++);
     }
 }
+
+void uart_putuint64(uint64_t num) {
+    char buffer[21];
+    int i = 0;
+
+    if (num == 0) {
+        uart_putchar('0');
+        return;
+    }
+
+    while (num > 0) {
+        buffer[i++] = '0' + (num % 10);
+        num /= 10;
+    }
+
+    while (i >= 0) {
+        uart_putchar(buffer[i--]);
+    }
+
+}
