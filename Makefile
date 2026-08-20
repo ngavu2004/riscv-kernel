@@ -9,14 +9,11 @@ all: kernel.elf
 user.elf: user.S user.ld
 	$(CC) $(CFLAGS) -T user.ld -o $@ user.S
 
-user.bin: user.elf
-	$(OBJCOPY) -O binary $< $@
-
-userbin.o: user.bin
+userelf.o: user.elf
 	$(LD) -r -b binary $< -o $@
 
-kernel.elf: entry.S trap.S main.c trap.c uart.c userbin.o
-	$(CC) $(CFLAGS) -T kernel.ld entry.S trap.S main.c trap.c uart.c userbin.o -o $@
+kernel.elf: entry.S trap.S main.c trap.c uart.c userelf.o
+	$(CC) $(CFLAGS) -T kernel.ld entry.S trap.S main.c trap.c uart.c userelf.o -o $@
 
 clean:
-	rm -f user.elf user.bin userbin.o kernel.elf
+	rm -f user.elf user.bin kernel.elf
