@@ -6,39 +6,40 @@ void uart_putstr(const char*);
 
 // declare asm label
 extern void trap_vector;
-extern char _binary_user_bin_start[];
-extern char _binary_user_bin_end[];
+extern char _binary_user_elf_start[];
+extern char _binary_user_elf_end[];
 
 void kernel_main() {
     // Test: Print string
     // uart_putstr("Hello tiramisu!\n");
 
-    // Compute user code size
-    uint64_t size =
-    _binary_user_bin_end -
-    _binary_user_bin_start;
+    // 1. Verify the first few bytes are actually elf file
+    char *elf = _binary_user_elf_start;
+    if (elf[0] == 0x7f  && elf[1] == 'E' && elf[2] == 'L' && elf[3] == 'F') {
+        uart_putstr("Valid ELF file");
 
-    // Copy binary to user address
-    char* source = _binary_user_bin_start;
-    char* dst = (char*)0x80100000;
+        // 2. Parse elf header
+    
 
-    for(uint64_t i=0;i<size;i++) {
-        dst[i] = source[i];
+        // 3. Load the PT_Load
+
+        // allow U-mode to fetch and access the loaded image
+        enable_user_memory();
+
+        // register trap vector
+        void *trap_vector_ptr = &trap_vector;
+        write_mtvec((uint64_t)trap_vector_ptr);
+        write_mepc((uint64_t)0x80100000);
+
+        // clear mpp bit to switch to user mode
+        clear_mpp();
+
+        // execute mret
+        __asm__ __volatile__ ("mret");
+    } else {
+        uart_putstr("Invalid ELF header. Exit.");
+        
     }
-
-    // allow U-mode to fetch and access the loaded image
-    enable_user_memory();
-
-    // register trap vector
-    void *trap_vector_ptr = &trap_vector;
-    write_mtvec((uint64_t)trap_vector_ptr);
-    write_mepc((uint64_t)0x80100000);
-
-    // clear mpp bit to switch to user mode
-    clear_mpp();
-
-    // execute mret
-    __asm__ __volatile__ ("mret");
-
+    
     while(1) {}
 }
