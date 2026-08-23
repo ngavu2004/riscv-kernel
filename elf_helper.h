@@ -23,11 +23,24 @@ typedef struct {
     uint32_t p_type;
     uint32_t p_flags;
     uint64_t p_offset;
-    uint64_t p_addr;
+    uint64_t p_vaddr;
+    uint64_t p_paddr;
     uint64_t p_filesz;
     uint64_t p_memsz;
     uint64_t p_align;
 } ProgramHeader;
+
+enum PT_TYPES {
+  PT_NULL,
+  PT_LOAD,
+  PT_DYNAMIC,
+  PT_INTERP,
+  PT_NOTE,
+  PT_SHLIB,
+  PT_PHDR,
+  PT_LOPROC=0x70000000, //reserved
+  PT_HIPROC=0x7FFFFFFF  //reserved
+};
 
 void uart_putstr(const char*);
 void uart_putuint64(uint64_t num);
