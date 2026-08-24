@@ -13,7 +13,19 @@ static inline void write_mepc(uint64_t x) {
     __asm__ volatile("csrw mepc, %0" : : "r" (x));
 }
 
-static inline void enable_user_memory() {
+static uint64_t align_user_sign(uint64_t user_size) {
+    uint64_t curr = 128;
+
+    for (int i = 7; i < 64; i++) {
+        if (curr < user_size && curr*2 > user_size) {
+            return curr*2;
+        }
+        curr *= 2;
+    }
+    return 4096;
+}
+
+static inline void enable_user_memory(uint64_t user_base_address, uint64_t user_size) {
     // Note RISC-V pmpaddr0 and pmpcf0 config the entry Physical Memory Protection
     // pmpcf0 decides the mode. The mode will decide the role of pmpaddr0
     // In our case, pmpcf0 = 0x1f -> 0 0 0 1 1 1 1 1
@@ -25,7 +37,8 @@ static inline void enable_user_memory() {
     // Because in NATA mode, the pmpaddr is 4-byte aligned, which will always have 00 at the end
     // So we always know the end is gonna be 00, then why wasting on the 00, shift them right by 2
     // and later on we can restore them later
-    uint64_t pmpaddr = (USER_BASE_ADDRESS >> 2) | ((USER_SIZE / 8) - 1);
+    uint64_t aligned_user_size = align_user_sign(user_size);
+    uint64_t pmpaddr = (user_base_address >> 2) | ((aligned_user_size / 8) - 1);
     __asm__ volatile(
         "mv t0, %0\n\t"
         "csrw pmpaddr0, t0\n\t"

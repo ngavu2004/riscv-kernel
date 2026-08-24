@@ -12,11 +12,18 @@ void uart_putuint64(uint64_t num);
 void trap_handler() {
     uint64_t cause = read_mcause();
 
-    uart_putstr("Mcause value");
+    uart_putstr("Mcause value:");
     uart_putuint64(cause);
+    uart_putstr("\n");
+
+    if (cause == 1) {
+        uart_putstr("Instruction access fault\n");
+        return;
+    }
 
     if (cause == 2) {
         uart_putstr("Illegal instruction");
+        return;
     }
     
     uart_putstr("Trap handler called");

@@ -32,3 +32,14 @@ void uart_putuint64(uint64_t num) {
     }
 
 }
+
+void uart_puthex(uint64_t value) {
+    const char digits[] = "0123456789abcdef";
+    int shift;
+
+    uart_putstr("0x");
+
+    for (shift = 60; shift >= 0; shift -= 4) {
+        uart_putchar(digits[(value >> shift) & 0xF]);
+    }
+}
