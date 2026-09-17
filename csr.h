@@ -3,6 +3,10 @@
 #define USER_BASE_ADDRESS 0x80100000
 #define USER_SIZE 4096 // 4 KiB
 
+typedef struct {
+
+} saved_registers;
+
 static inline void write_mtvec(uint64_t x) {
     __asm__ volatile("csrw mtvec, %0" : : "r"(x));
 }
@@ -60,6 +64,12 @@ static inline void clear_mpp() {
         "csrw mstatus, t0"           // Write the modified value back to mstatus
         : : : "t0", "t1"             // Clobbered registers
     );
+}
+
+static inline uint64_t read_general_register(char* reg) {
+    uint64_t reg_val;
+    __asm__ volatile("mv %0, %1" : "=r"(reg_val) : reg);
+    return reg_val;
 }
 
 static inline uint64_t read_mcause() {

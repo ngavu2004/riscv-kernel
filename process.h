@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define USER_PROCESS_BASE 0x80100000
 #define USER_PROCESS_SLOT_SIZE 0x1000
@@ -15,6 +15,13 @@ typedef enum {
 
 // Define process struct
 typedef struct {
-    uintptr_t base_address;
+    uint64_t base_address;
     process_states state;
-} process;
+} process_t;
+
+process_t NULL_PROCESS = {0, EXIT};
+
+int enqueue(process_t p);
+process_t* dequeue();
+bool is_empty();
+bool is_full();

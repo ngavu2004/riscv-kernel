@@ -3,6 +3,7 @@
 
 void uart_putstr(const char*);
 void uart_putuint64(uint64_t num);
+void uart_puthex(uint64_t num);
 
 // The basic things that a trap handler has to do:
 // 1. inspect the cause
@@ -13,7 +14,7 @@ void trap_handler() {
     uint64_t cause = read_mcause();
 
     uart_putstr("Mcause value:");
-    uart_putuint64(cause);
+    uart_puthex(cause);
     uart_putstr("\n");
 
     if (cause == 1) {
@@ -25,10 +26,12 @@ void trap_handler() {
         uart_putstr("Illegal instruction");
         return;
     }
+
+    if (cause == 8) {
+        
+    }
     
     uart_putstr("Trap handler called");
-    
-    
     write_mepc(read_mepc() + 4);
 
     return;
