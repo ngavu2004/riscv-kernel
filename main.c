@@ -14,13 +14,23 @@ uint64_t min_int(uint64_t a, uint64_t b) {
     return (a < b) ? a : b;
 }
 
+// stack smash protector test function
+// __attribute__((noinline))
+// static void test_ssp(void) {
+//     volatile char buffer[8];
+
+//     for (uint64_t i=0; i<16; i++) {
+//         buffer[i] = 'a';
+//     }
+// }
+
 
 void kernel_main() {
-    // Test: Print string
-    uart_putstr("Hello tiramisu!\n");
-    uart_putstr("Binary user elf start: ");
-    uart_puthex((uint64_t) _binary_user_elf_start);
-    uart_putstr("\n");
+    // Test: if stack smashing protector works
+    // uart_putstr("Start SSP test..\n");
+    // test_ssp();
+    // uart_putstr("SSP test done");
+
     // 1. Verify the first few bytes are actually elf file
     // Note: Ideally I would want memcmp here but since this is bare metal and I cant use any C libary, we will make do with this for now
     ElfHeader* elf = _binary_user_elf_start;
