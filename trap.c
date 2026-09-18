@@ -10,7 +10,20 @@ void uart_puthex(uint64_t num);
 // 2. detect syscall
 // 3. call UART
 // 4. increase mepc
-void trap_handler() {
+
+typedef struct{
+    uint64_t reg[32];
+} reg_frame;
+
+void trap_handler(reg_frame *frame) {
+    uint64_t user_a0 = frame->reg[10]; // a0 is x10
+    uint64_t user_sp = frame->reg[2];  // sp is x2
+    uint64_t user_ra = frame->reg[1];  // ra is x1
+    
+    uart_putstr("User a0: ");
+    uart_puthex(user_a0);
+    uart_putstr("\n");
+
     uint64_t cause = read_mcause();
 
     uart_putstr("Mcause value:");
@@ -28,7 +41,7 @@ void trap_handler() {
     }
 
     if (cause == 8) {
-        
+
     }
     
     uart_putstr("Trap handler called");

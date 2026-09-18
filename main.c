@@ -8,6 +8,7 @@ void uart_putstr(const char *);
 
 // declare asm label
 extern void trap_vector;
+extern char stack_top[];
 extern unsigned char _binary_user1_elf_start[];
 extern unsigned char _binary_user1_elf_end[];
 extern unsigned char _binary_user2_elf_start[];
@@ -76,7 +77,7 @@ void kernel_main()
     // register trap vector
     void *trap_vector_ptr = &trap_vector;
     write_mtvec((uint64_t)trap_vector_ptr);
-
+    
     // Execute the process queue
 
     while (!is_empty()) {

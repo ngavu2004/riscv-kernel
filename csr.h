@@ -66,12 +66,6 @@ static inline void clear_mpp() {
     );
 }
 
-static inline uint64_t read_general_register(char* reg) {
-    uint64_t reg_val;
-    __asm__ volatile("mv %0, %1" : "=r"(reg_val) : reg);
-    return reg_val;
-}
-
 static inline uint64_t read_mcause() {
     uint64_t cause;
     // csrr [rd], mcause: reads the mcause register into register [rd]
@@ -84,4 +78,8 @@ static inline uint64_t read_mepc() {
     // csrr [rd], mcause: reads the mcause register into register [rd]
     __asm__ volatile("csrr %0, mepc" : "=r"(mepc_value));
     return mepc_value;
+}
+
+static inline void write_mscratch(uint64_t value) {
+    __asm__ volatile("csrw mscratch, %0" : : "r"(value));
 }
