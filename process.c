@@ -25,6 +25,26 @@ process_t* dequeue() {
     };
 }
 
+void execute_processes() {
+    while (!is_empty()) {
+        uart_putstr("The process queue is not empty.\n");
+        process_t* p = dequeue();
+        uart_putstr("Curr entry point: ");
+        uart_puthex(p->base_address);
+        uart_putstr("\n");
+        
+        if (p->state == READY) {
+            write_mepc(p->base_address);
+            // clear mpp bit to switch to user mode
+            clear_mpp();
+
+            // execute mret
+            uart_putstr("Start executing the program\n");
+            __asm__ __volatile__("mret");
+        }
+    }
+}
+
 bool is_empty() {
     return (queue_pointer < 0);
 }

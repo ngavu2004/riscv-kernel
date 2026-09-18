@@ -59,7 +59,7 @@ void kernel_main()
         p.state = PENDING;
 
         // If succeed loading the elf file
-        if (load_elf_header(elf, elf_headers[i]) == 0) {
+        if (load_elf_header(elf, elf_headers[i], i) == 0) {
             p.state = READY;
             
             // Put it in the queue
@@ -79,21 +79,7 @@ void kernel_main()
     write_mtvec((uint64_t)trap_vector_ptr);
     
     // Execute the process queue
-
-    while (!is_empty()) {
-        uart_putstr("The process queue is not empty.\n");
-        process_t* p = dequeue();
-        
-        if (p->state == READY) {
-            write_mepc(p->base_address);
-            // clear mpp bit to switch to user mode
-            clear_mpp();
-
-            // execute mret
-            uart_putstr("Start executing the program\n");
-            __asm__ __volatile__("mret");
-        }
-    }
+    execute_processes();
     
     while (1)
     {

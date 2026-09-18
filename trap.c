@@ -4,6 +4,7 @@
 void uart_putstr(const char*);
 void uart_putuint64(uint64_t num);
 void uart_puthex(uint64_t num);
+void execute_processes();
 
 // The basic things that a trap handler has to do:
 // 1. inspect the cause
@@ -21,7 +22,7 @@ void trap_handler(reg_frame *frame) {
     uint64_t user_ra = frame->reg[1];  // ra is x1
     
     uart_putstr("User a0: ");
-    uart_puthex(user_a0);
+    uart_putuint64(user_a0);
     uart_putstr("\n");
 
     uint64_t cause = read_mcause();
@@ -41,10 +42,21 @@ void trap_handler(reg_frame *frame) {
     }
 
     if (cause == 8) {
-
+        switch (frame->reg[17]) {
+            case 1: // Print syscall
+                uart_putstr("Print syscall called.\n");
+                uart_putuint64(frame->reg[10]);
+                uart_putstr("\n");
+                break;
+            case 10: // Exit.
+                uart_putstr("Process exited.\n");
+                execute_processes(); // continue execute other processes
+                return;
+        }
+        
     }
     
-    uart_putstr("Trap handler called");
+    uart_putstr("Trap handler called\n");
     write_mepc(read_mepc() + 4);
 
     return;

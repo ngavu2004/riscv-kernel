@@ -4,5 +4,6 @@ _start:
     li a0, 45
     li a7, 1
     ecall
-spin:
-    j spin
+
+    li a7, 10
+    ecall

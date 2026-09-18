@@ -48,4 +48,4 @@ void uart_puthex(uint64_t value);
 
 void print_elf_header(ElfHeader* elf);
 
-int load_elf_header(ElfHeader *elf, const unsigned char * elf_start);
+int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry);

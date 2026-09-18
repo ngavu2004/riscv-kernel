@@ -75,7 +75,7 @@ void print_elf_header(ElfHeader *elf)
 
 }
 
-int load_elf_header(ElfHeader *elf, const unsigned char * elf_start)
+int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry)
 {
     if (elf->e_ident[0] == 0x7f && elf->e_ident[1] == 'E' && elf->e_ident[2] == 'L' && elf->e_ident[3] == 'F') {
         uart_putstr("Valid ELF file!\n");
@@ -90,7 +90,7 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start)
                 uart_puthex(curr_p->p_vaddr);
                 uart_putstr("\n");
 
-                enable_user_memory(curr_p->p_vaddr, curr_p->p_memsz);
+                enable_user_memory(curr_p->p_vaddr, curr_p->p_memsz, entry);
 
                 // Copy p_filesz bytes from p_offset to p_vaddr
                 char *src_addr = (char *)elf_start + curr_p->p_offset;
