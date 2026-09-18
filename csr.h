@@ -3,6 +3,10 @@
 #define USER_BASE_ADDRESS 0x80100000
 #define USER_SIZE 4096 // 4 KiB
 
+typedef struct {
+
+} saved_registers;
+
 static inline void write_mtvec(uint64_t x) {
     __asm__ volatile("csrw mtvec, %0" : : "r"(x));
 }
@@ -25,7 +29,7 @@ static uint64_t align_user_sign(uint64_t user_size) {
     return 4096;
 }
 
-static inline void enable_user_memory(uint64_t user_base_address, uint64_t user_size) {
+static inline void enable_user_memory(uint64_t base, uint64_t size, int entry) {
     // Note RISC-V pmpaddr0 and pmpcf0 config the entry Physical Memory Protection
     // pmpcf0 decides the mode. The mode will decide the role of pmpaddr0
     // In our case, pmpcf0 = 0x1f -> 0 0 0 1 1 1 1 1
@@ -37,15 +41,17 @@ static inline void enable_user_memory(uint64_t user_base_address, uint64_t user_
     // Because in NATA mode, the pmpaddr is 4-byte aligned, which will always have 00 at the end
     // So we always know the end is gonna be 00, then why wasting on the 00, shift them right by 2
     // and later on we can restore them later
-    uint64_t aligned_user_size = align_user_sign(user_size);
-    uint64_t pmpaddr = (user_base_address >> 2) | ((aligned_user_size / 8) - 1);
-    __asm__ volatile(
-        "mv t0, %0\n\t"
-        "csrw pmpaddr0, t0\n\t"
-        "li t0, 0x1f\n\t"
-        "csrw pmpcfg0, t0"
-        : :"r"(pmpaddr) : "t0"
-    );
+    uint64_t aligned_user_size = align_user_sign(size);
+    uint64_t pmpaddr =
+    (base >> 2) | ((aligned_user_size / 8) - 1);
+
+    if (entry == 0) {
+        __asm__ volatile("csrw pmpaddr0, %0" : : "r"(pmpaddr));
+        __asm__ volatile("csrs pmpcfg0, %0" : : "r"(0x1f));
+    } else if (entry == 1) {
+        __asm__ volatile("csrw pmpaddr1, %0" : : "r"(pmpaddr));
+        __asm__ volatile("csrs pmpcfg0, %0" : : "r"(0x1f << 8));
+    }
 }
 
 // 
@@ -74,4 +80,8 @@ static inline uint64_t read_mepc() {
     // csrr [rd], mcause: reads the mcause register into register [rd]
     __asm__ volatile("csrr %0, mepc" : "=r"(mepc_value));
     return mepc_value;
+}
+
+static inline void write_mscratch(uint64_t value) {
+    __asm__ volatile("csrw mscratch, %0" : : "r"(value));
 }
