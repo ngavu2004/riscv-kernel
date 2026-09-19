@@ -1,6 +1,9 @@
 CC = riscv64-unknown-elf-gcc
 OBJCOPY = riscv64-unknown-elf-objcopy
 LD = riscv64-unknown-elf-ld
+KERNEL_C := $(wildcard *.c)
+KERNEL_H := $(wildcard *.h)
+KERNEL_ASM := entry.S trap.S
 
 CFLAGS = -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
 
@@ -18,8 +21,8 @@ user1elf.o: user1.elf
 user2elf.o: user2.elf
 	$(LD) -r -b binary $< -o $@
 
-kernel.elf: entry.S trap.S main.c trap.c uart.c stack_smash_protector.c process.c elf.c csr.h user1elf.o user2elf.o
-	$(CC) $(CFLAGS) -T kernel.ld entry.S trap.S main.c trap.c uart.c stack_smash_protector.c user1elf.o user2elf.o -o $@
+kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(KERNEL_H) user1elf.o user2elf.o
+	$(CC) $(CFLAGS) -T kernel.ld entry.S trap.S main.c trap.c uart.c stack_smash_protector.c message.c elf.c process.c user1elf.o user2elf.o -o $@
 
 run: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic
