@@ -1,8 +1,8 @@
 .section .text
 .global _start
 _start:
-    li a0, 42
-    li a7, 1
+    li a7, 3
     ecall
-spin:
-    j spin
+
+    li a7, 10
+    ecall

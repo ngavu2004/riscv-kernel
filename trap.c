@@ -1,5 +1,7 @@
 // This file contains trap handling logic
 #include "csr.h"
+#include "process.h"
+#include "message.h"
 
 void uart_putstr(const char*);
 void uart_putuint64(uint64_t num);
@@ -22,7 +24,7 @@ void trap_handler(reg_frame *frame) {
     uint64_t user_ra = frame->reg[1];  // ra is x1
     
     uart_putstr("User a0: ");
-    uart_putuint64(user_a0);
+    uart_puthex(user_a0);
     uart_putstr("\n");
 
     uint64_t cause = read_mcause();
@@ -41,6 +43,11 @@ void trap_handler(reg_frame *frame) {
         return;
     }
 
+    if (cause == 7) {
+        uart_putstr("Store access fault");
+        return;
+    }
+
     if (cause == 8) {
         switch (frame->reg[17]) {
             case 1: // Print syscall
@@ -48,16 +55,31 @@ void trap_handler(reg_frame *frame) {
                 uart_putuint64(frame->reg[10]);
                 uart_putstr("\n");
                 break;
+            case 2: // Send
+                const char *message = (const char *)frame->reg[10];
+                uart_putstr("Sent message: ");
+                uart_putstr(message);
+                uart_putstr("\n");
+
+                send((char *)frame->reg[10], curr_pid(), (int)frame->reg[11]);
+                break;
+            case 3: // Receive message
+                uart_putstr("Start receiving message: ");
+                int pid = curr_pid();
+                receive(pid);
             case 10: // Exit.
                 uart_putstr("Process exited.\n");
                 execute_processes(); // continue execute other processes
-                return;
+                
+                // No runnable processes remain.
+                uart_putstr("No more processes.\n");
+                while (1) {
+                    __asm__ volatile("wfi");
+                }
         }
-        
     }
     
     uart_putstr("Trap handler called\n");
     write_mepc(read_mepc() + 4);
-
     return;
 }

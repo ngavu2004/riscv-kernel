@@ -1,4 +1,5 @@
 #include "elf.h"
+#include "csr.h"
 
 void print_elf_header(ElfHeader *elf)
 {

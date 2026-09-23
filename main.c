@@ -1,7 +1,8 @@
 // This is the main kernel file
 #include "csr.h"
-#include "elf.c"
-#include "process.c"
+#include "elf.h"
+#include "process.h"
+#include "message.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -69,6 +70,9 @@ void kernel_main()
             uart_putstr(".\n");
         }
     }
+
+    // Set up the message queue
+    initialize_message_queue(count);
 
     uart_putstr("== Finished loading ");
     uart_putuint64(count);

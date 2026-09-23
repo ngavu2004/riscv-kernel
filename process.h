@@ -11,17 +11,19 @@ typedef enum {
     READY,
     RUNNING,
     EXIT
-} process_states;
+} process_state;
 
 // Define process struct
 typedef struct {
     uint64_t base_address;
-    process_states state;
+    process_state state;
 } process_t;
 
-process_t NULL_PROCESS = {0, EXIT};
+extern process_t NULL_PROCESS;
 
+void execute_processes();
 int enqueue(process_t p);
 process_t* dequeue();
 bool is_empty();
-bool is_full();
+bool process_queue_is_full();
+int curr_pid(); // return current running process pid

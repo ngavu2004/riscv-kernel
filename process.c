@@ -1,11 +1,13 @@
 #include "process.h"
+#include "csr.h"
+#include "uart.h"
 
 process_t process_q[USER_PROCESS_SLOT_NUM];
 int queue_pointer = -1;
 
 int enqueue(process_t p) {
     // If the queue is already full
-    if (is_full()) {
+    if (process_queue_is_full()) {
         return -1;
     }
 
@@ -45,10 +47,16 @@ void execute_processes() {
     }
 }
 
+int curr_pid() {
+    return queue_pointer + 1;
+}
+
 bool is_empty() {
     return (queue_pointer < 0);
 }
 
-bool is_full() {
+bool process_queue_is_full() {
     return (queue_pointer == USER_PROCESS_SLOT_NUM - 1);
 }
+
+process_t NULL_PROCESS = {0, EXIT};
