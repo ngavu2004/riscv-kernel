@@ -20,4 +20,4 @@ extern message_t NULL_MESSAGE;
 void initialize_message_queue(int p_num);
 bool message_queue_is_full(message_queue_t q);
 bool send(char* message, int source_pid, int dest_pid);
-bool receive();
+void receive(int pid);

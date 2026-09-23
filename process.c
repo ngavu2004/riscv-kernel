@@ -47,6 +47,10 @@ void execute_processes() {
     }
 }
 
+int curr_pid() {
+    return queue_pointer + 1;
+}
+
 bool is_empty() {
     return (queue_pointer < 0);
 }

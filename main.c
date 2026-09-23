@@ -71,6 +71,9 @@ void kernel_main()
         }
     }
 
+    // Set up the message queue
+    initialize_message_queue(count);
+
     uart_putstr("== Finished loading ");
     uart_putuint64(count);
     uart_putstr(" program(s)==\n");

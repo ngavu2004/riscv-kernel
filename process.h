@@ -26,3 +26,4 @@ int enqueue(process_t p);
 process_t* dequeue();
 bool is_empty();
 bool process_queue_is_full();
+int curr_pid(); // return current running process pid

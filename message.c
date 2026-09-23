@@ -1,4 +1,6 @@
 #include "message.h"
+#include "uart.h"
+#include "process.h"
 #include <stddef.h>
 
 #define MAX_PROCESSES 4
@@ -41,6 +43,8 @@ bool send(char* text, int source_pid, int dest_pid) {
     if (message_queue_is_full(* destination)) {
         return false;
     };
+    
+    uart_putstr("Start initialize the new message");
 
     // Initialize the new message
     int position = destination->message_count;
@@ -49,14 +53,38 @@ bool send(char* text, int source_pid, int dest_pid) {
     new_message->source_pid = source_pid;
     new_message->dest_pid = dest_pid;
 
+    uart_putstr("Start copying message to kernel memory. \n");
+
     size_t i = 0;
     for (; i < MESSAGE_SIZE - 1 && text[i] != '\0'; i++) {
         // Note: I really have to implement memcpy
         new_message->message[i] = text[i];
     }
     new_message->message[i] = '\0';
-
     destination->message_count++;
+    uart_putstr("Done sending message.\n");
 
     return true;
 }
+
+void receive(int curr_pid) {
+    message_queue_t* q = &mq[curr_pid];
+
+    while (q->message_count > 0) {
+        int curr_pos = q->message_count - 1;
+        message_t* receive_m = q->queue[curr_pos];
+        uart_putstr("Received message: ");
+        uart_putstr(receive_m->message);
+        uart_putstr(" ; From: process ");
+        uart_putuint64(receive_m->source_pid + 1);
+        uart_putstr("\n");
+        
+        // Reset the message
+        receive_m->source_pid = -1;
+        receive_m->dest_pid = -1;
+        for (size_t k = 0; k < MESSAGE_SIZE; k++) {
+           receive_m->message[k] = '\0';
+        }
+        q->message_count--;
+    }
+};
