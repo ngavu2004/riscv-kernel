@@ -2,6 +2,7 @@
 #include "csr.h"
 #include "elf.h"
 #include "process.h"
+#include "pmp.h"
 #include "message.h"
 
 // declare prototype for uart_putstr function
@@ -73,6 +74,9 @@ void kernel_main()
 
     // Set up the message queue
     initialize_message_queue(count);
+
+    // Enable access of uart from user space
+    enable_uart_memory();
 
     uart_putstr("== Finished loading ");
     uart_putuint64(count);

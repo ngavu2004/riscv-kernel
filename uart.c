@@ -1,7 +1,5 @@
 #include <stdint.h>
-
-// QEMU emulator defines UART at 0x10000000L
-#define UART0 0x10000000L
+#include "uart.h"
 
 void uart_putchar(char c) {
     *(volatile unsigned char*)(UART0) = c;

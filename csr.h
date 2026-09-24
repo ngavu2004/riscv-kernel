@@ -17,7 +17,7 @@ static inline void write_mepc(uint64_t x) {
     __asm__ volatile("csrw mepc, %0" : : "r" (x));
 }
 
-static uint64_t align_user_sign(uint64_t user_size) {
+static uint64_t align_user_size(uint64_t user_size) {
     uint64_t curr = 128;
 
     for (int i = 7; i < 64; i++) {
@@ -29,28 +29,24 @@ static uint64_t align_user_sign(uint64_t user_size) {
     return 4096;
 }
 
-static inline void enable_user_memory(uint64_t base, uint64_t size, int entry) {
-    // Note RISC-V pmpaddr0 and pmpcf0 config the entry Physical Memory Protection
-    // pmpcf0 decides the mode. The mode will decide the role of pmpaddr0
-    // In our case, pmpcf0 = 0x1f -> 0 0 0 1 1 1 1 1
-    // We have R: 1, W: 1, X: 1, and A = 11
-    // Since A = 11, the mode is NATO
-    // In this mode, the pmpaddr encodes both the base address and user size
-    // int pmpaddr = (USER_BASE_ADDRESS >> 2) | ((USER_SIZE / 8) - 1)
-    // why (USER_BASE_ADDRESS >> 2) you ask?
-    // Because in NATA mode, the pmpaddr is 4-byte aligned, which will always have 00 at the end
-    // So we always know the end is gonna be 00, then why wasting on the 00, shift them right by 2
-    // and later on we can restore them later
-    uint64_t aligned_user_size = align_user_sign(size);
-    uint64_t pmpaddr =
-    (base >> 2) | ((aligned_user_size / 8) - 1);
+static uint64_t align_base_address(uint64_t base_addr) {
+    if (base_addr % 4 != 0) {
+        base_addr = (base_addr >> 2) << 2;
+    }
 
+    return base_addr;
+}
+
+static inline void write_pmpaddr(unsigned int entry, uint64_t value) {
     if (entry == 0) {
-        __asm__ volatile("csrw pmpaddr0, %0" : : "r"(pmpaddr));
+        __asm__ volatile("csrw pmpaddr0, %0" : : "r"(value));
         __asm__ volatile("csrs pmpcfg0, %0" : : "r"(0x1f));
     } else if (entry == 1) {
-        __asm__ volatile("csrw pmpaddr1, %0" : : "r"(pmpaddr));
+        __asm__ volatile("csrw pmpaddr1, %0" : : "r"(value));
         __asm__ volatile("csrs pmpcfg0, %0" : : "r"(0x1f << 8));
+    } else if (entry == 2) {
+        __asm__ volatile("csrw pmpaddr2, %0" : : "r"(value));
+        __asm__ volatile("csrs pmpcfg0, %0" : : "r"(0x1f << (8*2)));
     }
 }
 

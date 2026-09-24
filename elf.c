@@ -1,5 +1,6 @@
 #include "elf.h"
 #include "csr.h"
+#include "pmp.h"
 
 void print_elf_header(ElfHeader *elf)
 {
