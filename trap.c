@@ -46,8 +46,13 @@ void trap_handler(reg_frame *frame) {
     }
 
     if (cause == 7) {
-        uart_putstr("Store access fault");
-        return;
+        uart_putstr("Store access fault at: ");
+        uart_puthex(read_mtval());
+        uart_putstr("\n");
+
+        while (1) {
+            __asm__ volatile("wfi");
+        }
     }
 
     if (cause == 8) {

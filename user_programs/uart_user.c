@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "uart.h"
+#include "uart_user.h"
 
 void uart_putchar(char c) {
     *(volatile unsigned char*)(UART0) = c;
@@ -25,7 +25,7 @@ void uart_putuint64(uint64_t num) {
         num /= 10;
     }
 
-    while (i >= 0) {
+    while (i > 0) {
         uart_putchar(buffer[i--]);
     }
 
@@ -39,5 +39,42 @@ void uart_puthex(uint64_t value) {
 
     for (shift = 60; shift >= 0; shift -= 4) {
         uart_putchar(digits[(value >> shift) & 0xF]);
+    }
+}
+
+static void syscall_receive(char *buffer) {
+    register char *buffer_register asm("a0") = buffer;
+    register uint64_t syscall_register asm("a7") = 3;
+
+    asm volatile(
+        "ecall"
+        : "+r"(buffer_register)
+        : "r"(syscall_register)
+        : "memory"
+    );
+}
+
+static void syscall_exit(void) {
+    register uint64_t syscall_register asm("a7") = 10;
+
+    asm volatile(
+        "ecall"
+        :
+        : "r"(syscall_register)
+        : "memory"
+    );
+}
+
+void _start(void) {
+    char buffer[128];
+
+    syscall_receive(buffer);
+    uart_putstr("User UART received: ");
+    uart_putstr(buffer);
+    uart_putstr("\n");
+
+    syscall_exit();
+
+    while (1) {
     }
 }

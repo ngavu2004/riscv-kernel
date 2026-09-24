@@ -47,7 +47,20 @@ static inline void write_pmpaddr(unsigned int entry, uint64_t value) {
     } else if (entry == 2) {
         __asm__ volatile("csrw pmpaddr2, %0" : : "r"(value));
         __asm__ volatile("csrs pmpcfg0, %0" : : "r"(0x1f << (8*2)));
+    } else if (entry == 3) {
+        __asm__ volatile("csrw pmpaddr3, %0" : : "r"(value));
+        __asm__ volatile(
+            "csrs pmpcfg0, %0"
+            :
+            : "r"((uint64_t)0x1f << 24)
+        );
     }
+}
+
+static inline uint64_t read_mtval() {
+    uint64_t value;
+    __asm__ volatile("csrr %0, mtval" : "=r"(value));
+    return value;
 }
 
 // 
