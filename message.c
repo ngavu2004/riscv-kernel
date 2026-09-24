@@ -67,17 +67,31 @@ bool send(char* text, int source_pid, int dest_pid) {
     return true;
 }
 
-void receive(int curr_pid) {
+void receive(int curr_pid, char *buffer) {
     message_queue_t* q = &mq[curr_pid];
 
     while (q->message_count > 0) {
         int curr_pos = q->message_count - 1;
         message_t* receive_m = q->queue[curr_pos];
-        uart_putstr("Received message: ");
+        uart_putstr("Sender message: ");
         uart_putstr(receive_m->message);
         uart_putstr(" ; From: process ");
         uart_putuint64(receive_m->source_pid + 1);
         uart_putstr("\n");
+
+        // Copy the message to the buffer
+        for(int i=0; i< MESSAGE_SIZE; i++) {
+            if (receive_m->message[i] == '\0') {
+                buffer[i] = '\0';
+                break;
+            }
+
+            buffer[i] = receive_m->message[i];
+        }
+
+        // Print the message in the receiver buffer
+        uart_putstr("Receiver message: ");
+        uart_putstr(buffer);
         
         // Reset the message
         receive_m->source_pid = -1;

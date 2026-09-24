@@ -1,4 +1,6 @@
 // This file contains trap handling logic
+#include <stdint.h>
+#include <stddef.h>
 #include "csr.h"
 #include "process.h"
 #include "message.h"
@@ -65,8 +67,16 @@ void trap_handler(reg_frame *frame) {
                 break;
             case 3: // Receive message
                 uart_putstr("Start receiving message: ");
+                char *user_buffer = (char *)(uintptr_t)user_a0;
+
+                if (user_buffer == NULL) {
+                    uart_putstr("Invalid receive buffer\n");
+                    break;
+                }
+
                 int pid = curr_pid();
-                receive(pid);
+                receive(pid, user_buffer);
+                break;
             case 10: // Exit.
                 uart_putstr("Process exited.\n");
                 execute_processes(); // continue execute other processes

@@ -13,10 +13,10 @@ CFLAGS = -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
 all: kernel.elf
 
 user1.elf: $(USER_DIR)/user1.S $(USER_DIR)/user1.ld
-	$(CC) $(CFLAGS) -T user1.ld -o $@ user1.S
+	$(CC) $(CFLAGS) -T $(USER_DIR)/user1.ld -o $@ $(USER_DIR)/user1.S
 
 user2.elf: $(USER_DIR)/user2.S $(USER_DIR)/user2.ld
-	$(CC) $(CFLAGS) -T user2.ld -o $@ user2.S
+	$(CC) $(CFLAGS) -T $(USER_DIR)/user2.ld -o $@ $(USER_DIR)/user2.S
 
 user1elf.o: user1.elf
 	$(LD) -r -b binary $< -o $@

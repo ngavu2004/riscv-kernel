@@ -1,0 +1,43 @@
+#include <stdint.h>
+#include "uart.h"
+
+void uart_putchar(char c) {
+    *(volatile unsigned char*)(UART0) = c;
+}
+
+void uart_putstr(const char* s) {
+    while (*s) {
+        uart_putchar(*s++);
+    }
+}
+
+void uart_putuint64(uint64_t num) {
+    char buffer[21];
+    int i = 0;
+
+    if (num == 0) {
+        uart_putchar('0');
+        return;
+    }
+
+    while (num > 0) {
+        buffer[i++] = '0' + (num % 10);
+        num /= 10;
+    }
+
+    while (i >= 0) {
+        uart_putchar(buffer[i--]);
+    }
+
+}
+
+void uart_puthex(uint64_t value) {
+    const char digits[] = "0123456789abcdef";
+    int shift;
+
+    uart_putstr("0x");
+
+    for (shift = 60; shift >= 0; shift -= 4) {
+        uart_putchar(digits[(value >> shift) & 0xF]);
+    }
+}
