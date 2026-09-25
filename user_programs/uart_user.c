@@ -65,7 +65,7 @@ static void syscall_exit(void) {
     );
 }
 
-void _start(void) {
+void user_main() {
     char buffer[128];
 
     syscall_receive(buffer);

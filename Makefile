@@ -19,8 +19,8 @@ user1.elf: $(USER_DIR)/user1.S $(USER_DIR)/user1.ld
 user2.elf: $(USER_DIR)/user2.S $(USER_DIR)/user2.ld
 	$(CC) $(USER_CFLAGS) -T $(USER_DIR)/user2.ld -o $@ $(USER_DIR)/user2.S
 
-uart_user.elf: $(USER_DIR)/uart_user.c $(USER_DIR)/uart_user.h $(USER_DIR)/uart_user.ld
-	$(CC) $(USER_CFLAGS) -I $(USER_DIR) -T $(USER_DIR)/uart_user.ld -o $@ $(USER_DIR)/uart_user.c
+uart_user.elf: $(USER_DIR)/uart_entry.S $(USER_DIR)/uart_user.c $(USER_DIR)/uart_user.h $(USER_DIR)/uart_user.ld
+	$(CC) $(USER_CFLAGS) -I$(USER_DIR) -T $(USER_DIR)/uart_user.ld -o $@ $(USER_DIR)/uart_entry.S $(USER_DIR)/uart_user.c
 
 user1elf.o: user1.elf
 	$(LD) -r -b binary $< -o $@
