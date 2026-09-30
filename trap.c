@@ -68,7 +68,7 @@ void trap_handler(reg_frame *frame) {
                 uart_putstr(message);
                 uart_putstr("\n");
 
-                send((char *)frame->reg[10], curr_pid(), (int)frame->reg[11]);
+                send((char *)frame->reg[10], process_queue_curr_pid(), (int)frame->reg[11]);
                 break;
             case 3: // Receive message
                 uart_putstr("Start receiving message: ");
@@ -79,18 +79,24 @@ void trap_handler(reg_frame *frame) {
                     break;
                 }
 
-                int pid = curr_pid();
+                int pid = process_queue_curr_pid();
                 receive(pid, user_buffer);
                 break;
-            case 10: // Exit.
+            case 10: // Exit
                 uart_putstr("Process exited.\n");
-                execute_processes(); // continue execute other processes
-                
-                // No runnable processes remain.
-                uart_putstr("No more processes.\n");
-                while (1) {
-                    __asm__ volatile("wfi");
+
+                // Remove the process that just exited.
+                dequeue();
+
+                if (process_queue_is_empty()) {
+                    uart_putstr("No more processes.\n");
+                    while (1) {
+                        __asm__ volatile("wfi");
+                    }
                 }
+
+                execute_processes();
+                return; // Important: skip the common mepc += 4 logic
         }
     }
     
