@@ -1,14 +1,11 @@
 // This file contains trap handling logic
 #include <stdint.h>
 #include <stddef.h>
+#include "context_switch.h"
 #include "csr.h"
 #include "process.h"
 #include "message.h"
-
-void uart_putstr(const char*);
-void uart_putuint64(uint64_t num);
-void uart_puthex(uint64_t num);
-void execute_processes();
+#include "uart.h"
 
 // The basic things that a trap handler has to do:
 // 1. inspect the cause
@@ -16,11 +13,7 @@ void execute_processes();
 // 3. call UART
 // 4. increase mepc
 
-typedef struct{
-    uint64_t reg[32];
-} reg_frame;
-
-void trap_handler(reg_frame *frame) {
+void trap_handler(process_context_t *frame) {
     uint64_t user_a0 = frame->reg[10]; // a0 is x10
     uint64_t user_sp = frame->reg[2];  // sp is x2
     uint64_t user_ra = frame->reg[1];  // ra is x1
@@ -56,6 +49,7 @@ void trap_handler(reg_frame *frame) {
     }
 
     if (cause == 8) {
+        int curr_pid = process_queue_curr_pid();
         switch (frame->reg[17]) {
             case 1: // Print syscall
                 uart_putstr("Print syscall called.\n");
@@ -68,7 +62,11 @@ void trap_handler(reg_frame *frame) {
                 uart_putstr(message);
                 uart_putstr("\n");
 
-                send((char *)frame->reg[10], process_queue_curr_pid(), (int)frame->reg[11]);
+                send((char *)frame->reg[10], curr_pid, (int)frame->reg[11]);
+
+                save_context(curr_pid, frame);
+                block_process(curr_pid); // block the process after send, until the process receive a message back
+                execute_processes();
                 break;
             case 3: // Receive message
                 uart_putstr("Start receiving message: ");
@@ -79,21 +77,13 @@ void trap_handler(reg_frame *frame) {
                     break;
                 }
 
-                int pid = process_queue_curr_pid();
-                receive(pid, user_buffer);
+                receive(curr_pid, user_buffer);
+
                 break;
             case 10: // Exit
                 uart_putstr("Process exited.\n");
-
-                // Remove the process that just exited.
-                dequeue();
-
-                if (process_queue_is_empty()) {
-                    uart_putstr("No more processes.\n");
-                    while (1) {
-                        __asm__ volatile("wfi");
-                    }
-                }
+                process_t *p = find_process(curr_pid);
+                p->state = EXIT;
 
                 execute_processes();
                 return; // Important: skip the common mepc += 4 logic

@@ -3,7 +3,7 @@
 .p2align 2
 trap_vector:
     csrw mscratch, sp       # mscratch = original sp
-    addi sp, sp, -256       # allocate trap frame
+    addi sp, sp, -320       # allocate trap frame
 
     # x0, x5
     sd zero, 0(sp)
@@ -47,6 +47,10 @@ trap_vector:
     sd t4, 232(sp)
     sd t5, 240(sp)
     sd t6, 248(sp)
+    csrr t0, mepc
+    sd   t0, 256(sp)
+    csrr t0, mstatus
+    sd t0, 264(sp)
 
     mv a0, sp           # first arguement is pointer to register fram
     call trap_handler
@@ -84,7 +88,7 @@ trap_vector:
 
     # restore the original sp
     ld t0, 40(sp)
-    addi sp, sp, 256
+    addi sp, sp, 320
 
     mret
 

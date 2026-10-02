@@ -6,7 +6,7 @@ USER_DIR := user_programs
 
 KERNEL_C := $(wildcard *.c)
 KERNEL_H := $(wildcard *.h)
-KERNEL_ASM := entry.S trap.S
+KERNEL_ASM := entry.S trap.S restore_context_asm.S
 
 KERNEL_CFLAGS = -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
 USER_CFLAGS = -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
@@ -32,7 +32,7 @@ uart_userelf.o: uart_user.elf
 	$(LD) -r -b binary $< -o $@
 
 kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(KERNEL_H) user1elf.o user2elf.o uart_userelf.o
-	$(CC) $(KERNEL_CFLAGS) -T kernel.ld entry.S trap.S main.c trap.c uart.c stack_smash_protector.c message.c elf.c process.c pmp.c user1elf.o user2elf.o uart_userelf.o -o $@
+	$(CC) $(KERNEL_CFLAGS) -T kernel.ld entry.S trap.S restore_context_asm.S main.c context_switch.c trap.c uart.c memory_management.c stack_smash_protector.c message.c elf.c process.c pmp.c user1elf.o user2elf.o uart_userelf.o -o $@
 
 run: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic

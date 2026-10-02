@@ -64,6 +64,9 @@ bool send(char* text, int source_pid, int dest_pid) {
     destination->message_count++;
     uart_putstr("Done sending message.\n");
 
+    // Wake up the dest_pid to handle the message
+    unblock_process(dest_pid);
+
     return true;
 }
 
@@ -92,6 +95,9 @@ void receive(int curr_pid, char *buffer) {
         // Print the message in the receiver buffer
         uart_putstr("Receiver message: ");
         uart_putstr(buffer);
+
+        // Make the receiver ready
+        unblock_process(receive_m->source_pid);
         
         // Reset the message
         receive_m->source_pid = -1;

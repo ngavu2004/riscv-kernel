@@ -1,3 +1,6 @@
+#ifndef PROCESS_H
+#define PROCESS_H
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -6,20 +9,29 @@
 #define USER_PROCESS_SLOT_NUM 4
 
 
-
+void restore_context(uint64_t pid);
 // Define process states
 typedef enum {
     PENDING,
     READY,
     RUNNING,
+    BLOCKED,
     EXIT
 } process_state;
+
+typedef struct {
+    uint64_t reg[32];
+    uint64_t mepc;
+    uint64_t mstatus;
+} process_context_t;
 
 // Define process struct
 typedef struct {
     uint64_t pid;
     uint64_t base_address;
     process_state state;
+    bool have_saved_context;
+    process_context_t saved_context;
 } process_t;
 
 typedef struct {
@@ -28,9 +40,15 @@ typedef struct {
     int back;
 } process_queue_t;
 
-extern process_t NULL_PROCESS;
-
 void execute_processes();
+// Define process queue and NULL process
+extern process_t NULL_PROCESS;
+extern process_queue_t process_q;
+
+// process context switch methods
+bool block_process(int pid);
+bool unblock_process(int pid);
+process_t* find_process(int pid);
 
 // Process queue methods
 int enqueue(process_t p);
@@ -39,3 +57,5 @@ process_t* dequeue();
 bool process_queue_is_empty();
 bool process_queue_is_full();
 int process_queue_curr_pid(); // return current running process pid
+
+#endif
