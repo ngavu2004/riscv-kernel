@@ -21,8 +21,8 @@ typedef enum {
 
 typedef struct {
     uint64_t reg[32];
-    uint64_t mepc;
-    uint64_t mstatus;
+    uint64_t sepc;
+    uint64_t sstatus;
 } process_context_t;
 
 // Define process struct

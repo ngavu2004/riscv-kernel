@@ -96,13 +96,13 @@ void execute_processes() {
             uart_putstr(" ===\n");
             p->state = RUNNING;
             if (p->have_saved_context == true) {
-                restore_context(p->pid); // restore context will write mepc to the mepc saved in saved_context
+                restore_context(p->pid); // restore context will write sepc to the sepc saved in saved_context
             } else {
-                write_mepc(p->base_address); // else jump to the entry of the program
-                // clear mpp bit to switch to user mode
-                clear_mpp();
-                // execute mret
-                __asm__ __volatile__("mret");
+                write_sepc(p->base_address); // else jump to the entry of the program
+                // mpp = 0 -> U-mode
+                set_spp(0);
+                // execute sret
+                __asm__ __volatile__("sret");
             }
 
         } else if (p->state == BLOCKED) {

@@ -2,14 +2,14 @@
 .global trap_vector
 .p2align 2
 trap_vector:
-    csrw mscratch, sp       # mscratch = original sp
+    csrw sscratch, sp       # sscratch = original sp
     addi sp, sp, -320       # allocate trap frame
 
     # x0, x5
     sd zero, 0(sp)
     sd t0, 40(sp)
 
-    csrr t0, mscratch       # t0 = mscratch
+    csrr t0, sscratch       # t0 = sscratch
     sd t0, 16(sp)            # sp = x2
 
     # move other register
@@ -47,9 +47,9 @@ trap_vector:
     sd t4, 232(sp)
     sd t5, 240(sp)
     sd t6, 248(sp)
-    csrr t0, mepc
+    csrr t0, sepc
     sd   t0, 256(sp)
-    csrr t0, mstatus
+    csrr t0, sstatus
     sd t0, 264(sp)
 
     mv a0, sp           # first arguement is pointer to register fram
@@ -90,7 +90,7 @@ trap_vector:
     ld t0, 40(sp)
     addi sp, sp, 320
 
-    mret
+    sret
 
 
 spin:

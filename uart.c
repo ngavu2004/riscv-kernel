@@ -11,6 +11,11 @@ void uart_putstr(const char* s) {
     }
 }
 
+void uart_putline(const char *s) {
+    uart_putstr(s);
+    uart_putstr("\n");
+}
+
 void uart_putuint64(uint64_t num) {
     char buffer[21];
     int i = 0;

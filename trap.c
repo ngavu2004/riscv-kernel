@@ -11,7 +11,7 @@
 // 1. inspect the cause
 // 2. detect syscall
 // 3. call UART
-// 4. increase mepc
+// 4. increase sepc
 
 void trap_handler(process_context_t *frame) {
     uint64_t user_a0 = frame->reg[10]; // a0 is x10
@@ -22,9 +22,9 @@ void trap_handler(process_context_t *frame) {
     uart_puthex(user_a0);
     uart_putstr("\n");
 
-    uint64_t cause = read_mcause();
+    uint64_t cause = read_scause();
 
-    uart_putstr("Mcause value:");
+    uart_putstr("Scause value:");
     uart_puthex(cause);
     uart_putstr("\n");
 
@@ -86,11 +86,11 @@ void trap_handler(process_context_t *frame) {
                 p->state = EXIT;
 
                 execute_processes();
-                return; // Important: skip the common mepc += 4 logic
+                return; // Important: skip the common sepc += 4 logic
         }
     }
     
     uart_putstr("Trap handler called\n");
-    write_mepc(read_mepc() + 4);
+    write_sepc(read_sepc() + 4);
     return;
 }

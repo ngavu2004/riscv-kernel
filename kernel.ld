@@ -4,6 +4,10 @@ SECTIONS
 {
     . = 0x80000000;
 
+    .text.boot : {
+        KEEP(*(.text.boot))
+    }
+
     .text : {
         *(.text .text.*)
     }
