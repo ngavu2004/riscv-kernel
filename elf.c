@@ -92,8 +92,6 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry)
                 uart_puthex(curr_p->p_vaddr);
                 uart_putstr("\n");
 
-                enable_user_memory(curr_p->p_vaddr, curr_p->p_memsz, entry);
-
                 // Copy p_filesz bytes from p_offset to p_vaddr
                 char *src_addr = (char *)elf_start + curr_p->p_offset;
                 char *dst_addr = (char *)(uintptr_t)curr_p->p_vaddr;

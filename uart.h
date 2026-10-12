@@ -8,6 +8,7 @@
 
 
 void uart_putstr(const char *s);
+void uart_putline(const char *s);
 void uart_putuint64(uint64_t num);
 void uart_puthex(uint64_t value);
 

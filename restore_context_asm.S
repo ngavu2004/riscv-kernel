@@ -33,15 +33,15 @@ restore_context_asm:
     ld t6, 248(a0)
 
     ld t0, 256(a0)
-    csrw mepc, t0
+    csrw sepc, t0
 
     ld t0, 264(a0)
-    csrw mstatus, t0
+    csrw sstatus, t0
 
     ld t0, 40(a0)
 
     # restore a0 last
     ld a0,  80(a0)
-    mret
+    sret
 a0in:
     j a0in

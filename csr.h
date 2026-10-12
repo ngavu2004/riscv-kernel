@@ -1,14 +1,23 @@
+#ifndef CSR_H
+#define CSR_H
+
 #include <stdint.h>
 #define MPP_BIT_POS 11
-#define USER_BASE_ADDRESS 0x80100000
+#define SPP_BIT_POS 8
+#define USER_BASE_ADDRESS 0x80400000
 #define USER_SIZE 4096 // 4 KiB
 
 typedef struct {
-
-} saved_registers;
+    uint8_t interrupt_bit;
+    uint64_t exception_code;
+} mcause_value_t;
 
 static inline void write_mtvec(uint64_t x) {
     __asm__ volatile("csrw mtvec, %0" : : "r"(x));
+}
+
+static inline void write_stvec(uint64_t x) {
+    __asm__ volatile("csrw stvec, %0" : : "r"(x));
 }
 
 // Write to mepc
@@ -17,16 +26,17 @@ static inline void write_mepc(uint64_t x) {
     __asm__ volatile("csrw mepc, %0" : : "r" (x));
 }
 
+static inline void write_sepc(uint64_t x) {
+    __asm__ volatile("csrw sepc, %0" : : "r" (x));
+}
 static uint64_t align_user_size(uint64_t user_size) {
-    uint64_t curr = 128;
+    uint64_t size = 128;
 
-    for (int i = 7; i < 64; i++) {
-        if (curr < user_size && curr*2 > user_size) {
-            return curr*2;
-        }
-        curr *= 2;
+    while (size < user_size) {
+        size *= 2;
     }
-    return 4096;
+
+    return size;
 }
 
 static uint64_t align_base_address(uint64_t base_addr) {
@@ -77,10 +87,50 @@ static inline void clear_mpp() {
     );
 }
 
-static inline uint64_t read_mcause() {
+static inline void set_mpp(uint64_t value) {
+    // 0: U-mode; 1: S-mode; 3 (b11): M-mode.
+    uint64_t mpp = (value & 0x3) << MPP_BIT_POS; // left shift to create a bit mask
+
+    __asm__ volatile(
+        "csrr t0, mstatus\n\t"        // Read mstatus into register t0
+        "li t1, ~0x1800\n\t"         // Load bitmask for bits 11 and 12 (~0001100000000000)
+        "and t0, t0, t1\n\t"         // clear those bits
+        "or t0, t0, %0\n\t"
+        "csrw mstatus, t0"           // Write the modified value back to mstatus
+        : : "r" (mpp) 
+        : "t0", "t1"             // Clobbered registers
+    );
+}
+
+static inline void set_spp(uint64_t value) {
+    // 0: U-mode; 1: S-mode; 3 (b11): M-mode.
+    uint64_t spp = (value & 0x3) << SPP_BIT_POS; // left shift to create a bit mask
+
+    __asm__ volatile(
+        "csrr t0, sstatus\n\t"        // Read sstatus into register t0
+        "li t1, ~0x100\n\t"         // Load bitmask for bits 8 (~10000000)
+        "and t0, t0, t1\n\t"         // clear those bits
+        "or t0, t0, %0\n\t"
+        "csrw sstatus, t0"           // Write the modified value back to mstatus
+        : : "r" (spp) 
+        : "t0", "t1"             // Clobbered registers
+    );
+}
+
+static inline mcause_value_t read_mcause() {
+    mcause_value_t cause;
+    uint64_t mcause;
+    // csrr [rd], mcause: reads the mcause register into register [rd]
+    __asm__ volatile("csrr %0, mcause" : "=r"(mcause));
+    cause.interrupt_bit = mcause >> 63;
+    cause.exception_code = mcause & 0x7FFFFFFFFFFFFFFF;
+    return cause;
+}
+
+static inline uint64_t read_scause() {
     uint64_t cause;
     // csrr [rd], mcause: reads the mcause register into register [rd]
-    __asm__ volatile("csrr %0, mcause" : "=r"(cause));
+    __asm__ volatile("csrr %0, scause" : "=r"(cause));
     return cause;
 }
 
@@ -91,6 +141,15 @@ static inline uint64_t read_mepc() {
     return mepc_value;
 }
 
+static inline uint64_t read_sepc() {
+    uint64_t sepc_value;
+    // csrr [rd], mcause: reads the mcause register into register [rd]
+    __asm__ volatile("csrr %0, sepc" : "=r"(sepc_value));
+    return sepc_value;
+}
+
 static inline void write_mscratch(uint64_t value) {
     __asm__ volatile("csrw mscratch, %0" : : "r"(value));
 }
+
+#endif
