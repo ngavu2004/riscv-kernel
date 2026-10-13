@@ -1,8 +1,8 @@
 .section .text.boot
 .global _entry
 _entry: 
-        # load address of stack_top to sp
-        la sp, stack_top
+        # The boot stack must remain in the physical boot image.
+        la sp, boot_stack_top
 
         # delegate u-mode ecall to s-mode
         li t0, (1 << 8)           # Delegate U-mode ecalls
@@ -14,9 +14,9 @@ _entry:
 spin:
         j spin
 
-.section .bss
+.section .bss.boot
 .align 12
 
-stack:
+boot_stack:
     .space 4096
-stack_top:
+boot_stack_top:

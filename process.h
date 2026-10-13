@@ -40,7 +40,7 @@ typedef struct {
     int back;
 } process_queue_t;
 
-void execute_processes();
+void scheduler();
 // Define process queue and NULL process
 extern process_t NULL_PROCESS;
 extern process_queue_t process_q;

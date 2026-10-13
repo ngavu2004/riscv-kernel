@@ -10,3 +10,12 @@ void *memcpy(void *destination, const void *source, size_t size) {
 
     return destination;
 }
+
+pagetable_t create_kernel_pagetable(void) {
+    pagetable_t root_page_table = *(pagetable_t *) page_allocate();
+
+    // The boot and kernel will take every space from KERNEL_START to KERNEL_END
+    
+
+    return root_page_table;
+}

@@ -66,7 +66,7 @@ void trap_handler(process_context_t *frame) {
 
                 save_context(curr_pid, frame);
                 block_process(curr_pid); // block the process after send, until the process receive a message back
-                execute_processes();
+                scheduler();
                 break;
             case 3: // Receive message
                 uart_putstr("Start receiving message: ");
@@ -85,7 +85,7 @@ void trap_handler(process_context_t *frame) {
                 process_t *p = find_process(curr_pid);
                 p->state = EXIT;
 
-                execute_processes();
+                scheduler();
                 return; // Important: skip the common sepc += 4 logic
         }
     }

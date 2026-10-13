@@ -81,7 +81,7 @@ process_t* find_process(int pid) {
     return &NULL_PROCESS;
 }
 
-void execute_processes() {
+void scheduler() {
     while (!process_queue_is_empty()) {
         uart_putstr("The process queue is not empty.\n");
         process_t* p = front();

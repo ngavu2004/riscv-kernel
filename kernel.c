@@ -83,7 +83,7 @@ void kernel_main()
     
 
     // Execute the process queue
-    execute_processes();
+    scheduler();
     
     while (1)
     {

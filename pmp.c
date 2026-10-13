@@ -2,6 +2,7 @@
 #include "csr.h"
 #include "uart.h"
 
+__attribute__((section(".text.boot")))
 void enable_user_memory(uint64_t base, uint64_t size, int entry) {
     uint64_t base_addr = align_base_address(base);
     uint64_t aligned_user_size = align_user_size(size);
@@ -10,6 +11,7 @@ void enable_user_memory(uint64_t base, uint64_t size, int entry) {
     write_pmpaddr(entry, pmpaddr);
 }
 
+__attribute__((section(".text.boot")))
 void enable_uart_memory() {
     enable_user_memory(UART0, UART0_SIZE, 3);
 }
