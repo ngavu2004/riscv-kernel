@@ -15,7 +15,11 @@ void boot_main(void) {
     enable_uart_memory();
 
     // create kernel page table
-    
+    uintptr_t root_pt = create_kernel_pagetable();
+
+    uint64_t satp = (8ULL << 60) | (root_pt >> 12);  // Sv39
+    __asm__ volatile("sfence.vma" ::: "memory");
+
     // register kernel entry and trap vectors for M-mode and S-mode
     write_mtvec((uint64_t)&mtrap_handler);
     write_stvec((uint64_t)&trap_vector);
