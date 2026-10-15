@@ -4,6 +4,7 @@
 #include "process.h"
 #include "pmp.h"
 #include "message.h"
+#include "memory_management.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -61,9 +62,13 @@ void kernel_main()
         p.pid = i;
         p.base_address = elf->e_entry;
         p.state = PENDING;
+        p.root_pt = (uintptr_t) page_allocate();
 
         // If succeed loading the elf file
-        if (load_elf_header(elf, elf_headers[i], i) == 0) {
+        if (load_elf_header(elf, elf_headers[i], i, p.root_pt) == 0) {
+            // map the kernel address to the process pt
+            map_kernel_address((pagetable_t *) p.root_pt);
+
             p.state = READY;
             
             // Put it in the queue

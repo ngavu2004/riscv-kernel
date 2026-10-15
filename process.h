@@ -32,6 +32,7 @@ typedef struct {
     process_state state;
     bool have_saved_context;
     process_context_t saved_context;
+    uintptr_t root_pt;
 } process_t;
 
 typedef struct {

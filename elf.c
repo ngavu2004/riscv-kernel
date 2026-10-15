@@ -1,6 +1,7 @@
 #include "elf.h"
 #include "csr.h"
 #include "pmp.h"
+#include "memory_management.h"
 
 void print_elf_header(ElfHeader *elf)
 {
@@ -77,7 +78,7 @@ void print_elf_header(ElfHeader *elf)
 
 }
 
-int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry)
+int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry, uintptr_t process_pt)
 {
     if (elf->e_ident[0] == 0x7f && elf->e_ident[1] == 'E' && elf->e_ident[2] == 'L' && elf->e_ident[3] == 'F') {
         uart_putstr("Valid ELF file!\n");
@@ -92,19 +93,36 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry)
                 uart_puthex(curr_p->p_vaddr);
                 uart_putstr("\n");
 
-                // Copy p_filesz bytes from p_offset to p_vaddr
-                char *src_addr = (char *)elf_start + curr_p->p_offset;
-                char *dst_addr = (char *)(uintptr_t)curr_p->p_vaddr;
-                for (uint64_t j = 0; j < curr_p->p_filesz; j++)
-                {
-                    dst_addr[j] = src_addr[j];
-                };
+                // Get the number of page needed to allocate for this process
+                uint64_t page_count = curr_p->p_memsz / PAGE_SIZE + (curr_p->p_memsz % PAGE_SIZE != 0);
 
-                // Zero out the bytes from p_filesz to p_memsz
-                for (uint64_t j = curr_p->p_filesz; j < curr_p->p_memsz; j++)
-                {
-                    dst_addr[j] = 0;
+                char *src_addr = (char *)elf_start + curr_p->p_offset;
+                
+                for (int page = 0; page<page_count; page++) {
+                    // Copy p_filesz bytes from p_offset to the allocated page
+                    src_addr += PAGE_SIZE*page;
+                    char *dst_addr = (char *) page_allocate();
+                    map_page((pagetable_t *) process_pt, (uint64_t) src_addr, (uint64_t) dst_addr, 1, PTE_V | PTE_R | PTE_X);
+
+                    for (uint64_t j = 0; j < PAGE_SIZE; j++)
+                    {   
+                        if ( j >= curr_p->p_filesz) {
+                            break;
+                        }
+                        dst_addr[j + PAGE_SIZE*page] = src_addr[j];
+                    };
+
+                    // Zero out the bytes from p_filesz to p_memsz at the last page
+                    if (page == page_count - 1) {
+                        for (uint64_t j = curr_p->p_filesz; j < curr_p->p_memsz; j++)
+                        {
+                            dst_addr[j] = 0;
+                        }
+                    }
+                    
                 }
+
+                
             };
         }
 

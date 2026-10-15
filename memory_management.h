@@ -79,7 +79,7 @@ static inline void get_indexes(uint64_t va, uint64_t page_table_indexes[3]) {
 }
 
 uintptr_t create_kernel_pagetable(void);
-uintptr_t create_user_pagetable(void);
+void map_kernel_address(pagetable_t* pt);
 
 void map_page(
     pagetable_t* pt,

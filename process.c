@@ -94,6 +94,12 @@ void scheduler() {
             uart_putstr("=== Start executing program ");
             uart_putuint64(p->pid);
             uart_putstr(" ===\n");
+
+            // Update the satp
+            uint64_t satp = (8ULL << 60) | (p->root_pt >> 12);
+            __asm__ volatile( "csrw satp, %0" : : "r"(satp) : "memory");
+            __asm__ volatile("sfence.vma" ::: "memory");
+            
             p->state = RUNNING;
             if (p->have_saved_context == true) {
                 restore_context(p->pid); // restore context will write sepc to the sepc saved in saved_context

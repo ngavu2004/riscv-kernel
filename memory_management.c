@@ -44,11 +44,22 @@ void map_page(
     }
 }
 
+void map_kernel_address(pagetable_t* pt) {
+    // Map kernel text
+    map_page(pt, (uintptr_t)__text_start, (uintptr_t)__text_start, (int) (__text_start - __text_end) / PAGE_SIZE, PTE_V | PTE_R | PTE_X);
+
+    // Map kernel rodata and data
+    map_page(pt, (uintptr_t)__ro_data_start, (uintptr_t)__ro_data_end, (int) (__ro_data_start - __ro_data_end) / PAGE_SIZE, PTE_V | PTE_R );
+    map_page(pt, (uintptr_t)__data_start, (uintptr_t)__data_end, (int) (__data_start - __data_end) / PAGE_SIZE, PTE_V | PTE_R | PTE_W);
+
+    // Map bss section
+    map_page(pt, (uintptr_t)__bss_start, (uintptr_t)__bss_end, (int) (__bss_start - __bss_end) / PAGE_SIZE, PTE_V | PTE_R | PTE_W);
+}
+
 uintptr_t create_kernel_pagetable(void) {
     pagetable_t *root_page_table = page_allocate();
 
-    // Map kernel text
-    map_page(root_page_table, (uintptr_t)__text_start, (uintptr_t)__text_start, (int) (__text_start - __text_end) / PAGE_SIZE, PTE_V | PTE_R | PTE_X);
+    map_kernel_address(root_page_table);
 
     return (uintptr_t)root_page_table;
 }
