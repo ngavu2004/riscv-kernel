@@ -152,4 +152,20 @@ static inline void write_mscratch(uint64_t value) {
     __asm__ volatile("csrw mscratch, %0" : : "r"(value));
 }
 
+static inline void enable_sum(void)
+{
+    uint64_t sstatus;
+    __asm__ volatile("csrr %0, sstatus" : "=r"(sstatus));
+    sstatus |= (1ULL << 18); // sstatus.SUM
+    __asm__ volatile("csrw sstatus, %0" :: "r"(sstatus) : "memory");
+}
+
+static inline void disable_sum(void)
+{
+    uint64_t sstatus;
+    __asm__ volatile("csrr %0, sstatus" : "=r"(sstatus));
+    sstatus &= ~(1ULL << 18);
+    __asm__ volatile("csrw sstatus, %0" :: "r"(sstatus) : "memory");
+}
+
 #endif

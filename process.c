@@ -1,6 +1,7 @@
 #include "csr.h"
 #include "process.h"
 #include "uart.h"
+#include "memory_management.h"
 
 process_t NULL_PROCESS = {-1, 0, EXIT};
 
@@ -81,7 +82,7 @@ process_t* find_process(int pid) {
     return &NULL_PROCESS;
 }
 
-void execute_processes() {
+void scheduler() {
     while (!process_queue_is_empty()) {
         uart_putstr("The process queue is not empty.\n");
         process_t* p = front();
@@ -94,14 +95,19 @@ void execute_processes() {
             uart_putstr("=== Start executing program ");
             uart_putuint64(p->pid);
             uart_putstr(" ===\n");
+
+            // Update the satp
+            switch_page_table(p->root_pt);
+
             p->state = RUNNING;
             if (p->have_saved_context == true) {
                 restore_context(p->pid); // restore context will write sepc to the sepc saved in saved_context
             } else {
                 write_sepc(p->base_address); // else jump to the entry of the program
-                // mpp = 0 -> U-mode
+                // spp = 0 -> U-mode
                 set_spp(0);
-                // execute sret
+                // save the current stack pointer and execute sret
+                __asm__ __volatile__("csrw sscratch, sp" ::: "memory");
                 __asm__ __volatile__("sret");
             }
 

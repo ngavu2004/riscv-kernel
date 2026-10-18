@@ -1,10 +1,11 @@
 ENTRY(_start)
+PAGE_SIZE = 4096;
 
 SECTIONS
 {
-    . = 0x80400000;
+    . = 0x00000000;
 
-    .text : {
+    .text : ALIGN(PAGE_SIZE) {
         *(.text*)
     }
 }

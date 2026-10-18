@@ -2,7 +2,7 @@
 .global _kernel_entry
 _kernel_entry:
         # load address of stack_top to sp
-        la sp, stack_top
+        la sp, kernel_stack_top
         
         # jump into boot entry
         call kernel_main
@@ -15,4 +15,4 @@ spin:
 
 stack:
     .space 4096
-stack_top:
+kernel_stack_top:

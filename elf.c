@@ -1,6 +1,7 @@
 #include "elf.h"
 #include "csr.h"
 #include "pmp.h"
+#include "memory_management.h"
 
 void print_elf_header(ElfHeader *elf)
 {
@@ -77,7 +78,7 @@ void print_elf_header(ElfHeader *elf)
 
 }
 
-int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry)
+int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry, uintptr_t process_pt)
 {
     if (elf->e_ident[0] == 0x7f && elf->e_ident[1] == 'E' && elf->e_ident[2] == 'L' && elf->e_ident[3] == 'F') {
         uart_putstr("Valid ELF file!\n");
@@ -88,23 +89,78 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry)
 
             if (curr_p->p_type == PT_LOAD)
             {   
+                if (curr_p->p_memsz < curr_p->p_filesz) {
+                    return -1;
+                };
+
                 uart_putstr("Load segment: ");
                 uart_puthex(curr_p->p_vaddr);
                 uart_putstr("\n");
 
-                // Copy p_filesz bytes from p_offset to p_vaddr
-                char *src_addr = (char *)elf_start + curr_p->p_offset;
-                char *dst_addr = (char *)(uintptr_t)curr_p->p_vaddr;
-                for (uint64_t j = 0; j < curr_p->p_filesz; j++)
-                {
-                    dst_addr[j] = src_addr[j];
-                };
+                // Get the number of page needed to allocate for this process
+                uint64_t page_count = curr_p->p_memsz / PAGE_SIZE + (curr_p->p_memsz % PAGE_SIZE != 0);
 
-                // Zero out the bytes from p_filesz to p_memsz
-                for (uint64_t j = curr_p->p_filesz; j < curr_p->p_memsz; j++)
-                {
-                    dst_addr[j] = 0;
+                char *src_addr = (char *)elf_start + curr_p->p_offset;
+                
+                for (int page = 0; page<page_count; page++) {
+                    // Copy p_filesz bytes from p_offset to the allocated page
+                    char *src_addr = (char *)elf_start + curr_p->p_offset + PAGE_SIZE * page;
+                    char *dst_addr = page_allocate();
+
+                    if (dst_addr == NULL) {
+                        return -1;
+                    }
+
+                    uint64_t segment_offset = PAGE_SIZE * page;
+                    uint64_t bytes_to_copy = 0;
+
+                    if (segment_offset < curr_p->p_filesz) {
+                        uint64_t bytes_remaining =
+                            curr_p->p_filesz - segment_offset;
+
+                        bytes_to_copy =
+                            bytes_remaining < PAGE_SIZE
+                                ? bytes_remaining
+                                : PAGE_SIZE;
+                    }
+
+                    uint64_t va = curr_p->p_vaddr + PAGE_SIZE * page;
+                    uint64_t flags = PTE_V | PTE_U;
+                    
+                    // Map the segment according to the flag
+                    if (curr_p->p_flags & PF_R) flags |= PTE_R;
+                    if (curr_p->p_flags & PF_W) flags |= PTE_W;
+                    if (curr_p->p_flags & PF_X) flags |= PTE_X;
+
+                    map_page(
+                        (pagetable_t *)process_pt,
+                        va,
+                        (uint64_t)dst_addr,
+                        1,
+                        flags
+                    );
+
+                    for (uint64_t j = 0; j < bytes_to_copy; j++) {
+                        dst_addr[j] = src_addr[j];
+                    }
+
+                    // Zero out the bytes from p_filesz to p_memsz at the last page
+                    if (segment_offset + bytes_to_copy < curr_p->p_memsz) {
+                        uint64_t zero_start = bytes_to_copy;
+                        uint64_t zero_end = PAGE_SIZE;
+
+                        if (segment_offset + zero_end > curr_p->p_memsz) {
+                            zero_end = curr_p->p_memsz - segment_offset;
+                        }
+
+                        for (uint64_t j = zero_start; j < zero_end; j++) {
+                            dst_addr[j] = 0;
+                        }
+                    }
+                    
                 }
+
+                
             };
         }
 

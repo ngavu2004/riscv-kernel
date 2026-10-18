@@ -1,22 +1,23 @@
 ENTRY(_start)
+PAGE_SIZE = 4096;
 
 SECTIONS
 {
-    . = 0x80600000;
+    . = 0x00;
 
-    .text : {
+    .text : ALIGN(PAGE_SIZE) {
         *(.text*)
     }
 
-    .rodata : {
+    .rodata : ALIGN(PAGE_SIZE) {
         *(.rodata*)
     }
 
-    .data : {
+    .data : ALIGN(PAGE_SIZE) {
         *(.data*)
     }
 
-    .bss : {
+    .bss : ALIGN(PAGE_SIZE) {
         *(.bss*)
         *(COMMON)
     }

@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define USER_PROCESS_BASE 0x80100000
-#define USER_PROCESS_SLOT_SIZE 0x1000
 #define USER_PROCESS_SLOT_NUM 4
 
 
@@ -32,6 +30,7 @@ typedef struct {
     process_state state;
     bool have_saved_context;
     process_context_t saved_context;
+    uintptr_t root_pt;
 } process_t;
 
 typedef struct {
@@ -40,7 +39,7 @@ typedef struct {
     int back;
 } process_queue_t;
 
-void execute_processes();
+void scheduler();
 // Define process queue and NULL process
 extern process_t NULL_PROCESS;
 extern process_queue_t process_q;

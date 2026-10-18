@@ -7,9 +7,10 @@ USER_DIR := user_programs
 KERNEL_C := $(wildcard *.c)
 KERNEL_H := $(wildcard *.h)
 KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
+USER_OBJS := user1elf.o user2elf.o uart_userelf.o
 
 KERNEL_CFLAGS = -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
-USER_CFLAGS = -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
+USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
 
 all: kernel.elf
 
@@ -31,8 +32,8 @@ user2elf.o: user2.elf
 uart_userelf.o: uart_user.elf
 	$(LD) -r -b binary $< -o $@
 
-kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(KERNEL_H) user1elf.o user2elf.o uart_userelf.o
-	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) user1elf.o user2elf.o uart_userelf.o -o $@
+kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(KERNEL_H) kernel.ld $(USER_OBJS)
+	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) $(USER_OBJS) -o $@
 
 run: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic
@@ -44,4 +45,4 @@ gdb:
 	gdb-multiarch kernel.elf -ex "target remote localhost:1234"
 
 clean:
-	rm -f user1.elf user2.elf user1elf.o user2elf.o kernel.elf
+	rm -f user1.elf user2.elf uart_user.elf $(USER_OBJS) kernel.elf
