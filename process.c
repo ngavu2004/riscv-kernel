@@ -1,6 +1,7 @@
 #include "csr.h"
 #include "process.h"
 #include "uart.h"
+#include "memory_management.h"
 
 process_t NULL_PROCESS = {-1, 0, EXIT};
 
@@ -96,18 +97,17 @@ void scheduler() {
             uart_putstr(" ===\n");
 
             // Update the satp
-            uint64_t satp = (8ULL << 60) | (p->root_pt >> 12);
-            __asm__ volatile( "csrw satp, %0" : : "r"(satp) : "memory");
-            __asm__ volatile("sfence.vma" ::: "memory");
-            
+            switch_page_table(p->root_pt);
+
             p->state = RUNNING;
             if (p->have_saved_context == true) {
                 restore_context(p->pid); // restore context will write sepc to the sepc saved in saved_context
             } else {
                 write_sepc(p->base_address); // else jump to the entry of the program
-                // mpp = 0 -> U-mode
+                // spp = 0 -> U-mode
                 set_spp(0);
-                // execute sret
+                // save the current stack pointer and execute sret
+                __asm__ __volatile__("csrw sscratch, sp" ::: "memory");
                 __asm__ __volatile__("sret");
             }
 

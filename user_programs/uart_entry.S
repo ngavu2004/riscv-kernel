@@ -15,6 +15,5 @@ _start:
 .align 4
 
 user_stack:
-    .space 1024
-
+    .space 4096
 user_stack_top:

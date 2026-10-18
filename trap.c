@@ -58,9 +58,11 @@ void trap_handler(process_context_t *frame) {
                 break;
             case 2: // Send
                 const char *message = (const char *)frame->reg[10];
+
                 uart_putstr("Sent message: ");
                 uart_putstr(message);
                 uart_putstr("\n");
+
 
                 send((char *)frame->reg[10], curr_pid, (int)frame->reg[11]);
 

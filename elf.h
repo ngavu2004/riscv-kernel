@@ -1,6 +1,9 @@
 
 #include <stdint.h>
 
+#define PF_X 1
+#define PF_W 2
+#define PF_R 4
 // Note: this is the standard name for header struct. Source: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 typedef struct {
     unsigned char e_ident[16];

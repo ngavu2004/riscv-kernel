@@ -18,6 +18,8 @@ extern unsigned char _binary_user2_elf_end[];
 extern unsigned char _binary_uart_user_elf_start[];
 extern unsigned char _binary_uart_user_elf_end[];
 
+#define UART_USER_PID 2
+
 uint64_t min_int(uint64_t a, uint64_t b)
 {
     return (a < b) ? a : b;
@@ -62,13 +64,17 @@ void kernel_main()
         p.pid = i;
         p.base_address = elf->e_entry;
         p.state = PENDING;
+        p.have_saved_context = false;
         p.root_pt = (uintptr_t) page_allocate();
+        map_kernel_address((pagetable_t *)p.root_pt);
+
+        // if the index is the index of the UART program
+        if (i == UART_USER_PID) {
+            map_user_uart(p.root_pt);
+        }
 
         // If succeed loading the elf file
         if (load_elf_header(elf, elf_headers[i], i, p.root_pt) == 0) {
-            // map the kernel address to the process pt
-            map_kernel_address((pagetable_t *) p.root_pt);
-
             p.state = READY;
             
             // Put it in the queue

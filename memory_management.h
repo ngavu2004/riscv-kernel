@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "uart.h"
 
 #define PTE_V  (1ULL << 0)
 #define PTE_R  (1ULL << 1)
@@ -13,14 +14,16 @@
 
 #define PAGE_SIZE 4096
 #define ENTRY_NUM 512
-#define PAGE_START_ADDRESS 0x80400000
-#define PAGE_END_ADDRESS   0x80800000
+#define PAGE_ALLOC_START 0x80400000
+#define PAGE_ALLOC_END   0x80800000
 
 extern char __boot_text_start[], __boot_text_end[];
 extern char __text_start[], __text_end[];
 extern char __ro_data_start[], __ro_data_end[];
 extern char __data_start[], __data_end[];
 extern char __bss_start[], __bss_end[];
+
+extern uintptr_t kernel_root_pt;
 
 typedef struct {
     uint8_t data[PAGE_SIZE];
@@ -32,30 +35,8 @@ typedef struct {
     pte_t entries[ENTRY_NUM];
 } pagetable_t;
 
-static uintptr_t next_free_page = PAGE_START_ADDRESS;
 
-static void zero_page(void *page)
-{
-    unsigned char *bytes = page;
-
-    for (size_t i = 0; i < PAGE_SIZE; i++) {
-        bytes[i] = 0;
-    }
-}
-
-static void *page_allocate(void)
-{
-    if (next_free_page >= PAGE_END_ADDRESS) {
-        return NULL;
-    }
-
-    void *page = (void *)next_free_page;
-    next_free_page += PAGE_SIZE;
-
-    zero_page(page);
-    return page;
-}
-
+void *page_allocate(void);
 
 static inline pte_t pa_to_pte(uintptr_t physical_address, uint64_t flags)
 {
@@ -78,6 +59,19 @@ static inline void get_indexes(uint64_t va, uint64_t page_table_indexes[3]) {
     page_table_indexes[0] = (va >> 12) & 0x1ff;
 }
 
+static inline void switch_page_table(uintptr_t root_pt)
+{
+    uint64_t satp = (8ULL << 60) | (root_pt >> 12);
+
+    __asm__ volatile(
+        "csrw satp, %0\n"
+        "sfence.vma"
+        :
+        : "r"(satp)
+        : "memory"
+    );
+}
+
 uintptr_t create_kernel_pagetable(void);
 void map_kernel_address(pagetable_t* pt);
 
@@ -88,5 +82,7 @@ void map_page(
     int pages,
     uint64_t flags
 );
+
+void map_user_uart(pagetable_t *pt);
 
 void *memcpy(void *destination, const void *source, size_t size);

@@ -10,7 +10,7 @@ KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
 USER_OBJS := user1elf.o user2elf.o uart_userelf.o
 
 KERNEL_CFLAGS = -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
-USER_CFLAGS = -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
+USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
 
 all: kernel.elf
 

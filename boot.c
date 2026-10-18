@@ -10,14 +10,14 @@ extern void trap_vector(void);
 __attribute__((section(".text.boot")))
 void boot_main(void) {
     // Enable pmp range here
-    enable_user_memory(0x80000000, 0x400000, 0);
+    enable_user_memory(0x80000000, 0x1000000, 0);
     enable_user_memory(USER_BASE_ADDRESS, 0x400000, 1);
     enable_uart_memory();
 
     // create kernel page table
-    uintptr_t root_pt = create_kernel_pagetable();
+    kernel_root_pt = create_kernel_pagetable();
 
-    uint64_t satp = (8ULL << 60) | (root_pt >> 12);  // Sv39
+    uint64_t satp = (8ULL << 60) | (kernel_root_pt >> 12);  // Sv39
     __asm__ volatile( "csrw satp, %0" : : "r"(satp) : "memory");
     __asm__ volatile("sfence.vma" ::: "memory");
 

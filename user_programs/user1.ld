@@ -5,7 +5,7 @@ SECTIONS
 {
     . = 0x00000000;
 
-    .text : ALIGN(4096) {
+    .text : ALIGN(PAGE_SIZE) {
         *(.text*)
     }
 }

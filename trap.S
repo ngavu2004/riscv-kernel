@@ -2,7 +2,15 @@
 .global trap_vector
 .p2align 2
 trap_vector:
-    csrw sscratch, sp       # sscratch = original sp
+    # Before the trap:
+    #   sp       = user stack pointer
+    #   sscratch = kernel stack pointer
+    #
+    # After this instruction:
+    #   sp       = kernel stack pointer
+    #   sscratch = user stack pointer
+
+    csrrw sp, sscratch, sp       # sscratch = original sp
     addi sp, sp, -320       # allocate trap frame
 
     # x0, x5
@@ -47,10 +55,18 @@ trap_vector:
     sd t4, 232(sp)
     sd t5, 240(sp)
     sd t6, 248(sp)
+
     csrr t0, sepc
     sd   t0, 256(sp)
+
+    # Save the original sstatus before changing SUM.
     csrr t0, sstatus
-    sd t0, 264(sp)
+    sd   t0, 264(sp)
+
+    # Set sstatus.SUM (bit 18)
+    li   t1, (1 << 18)
+    or   t0, t0, t1
+    csrw sstatus, t0
 
     mv a0, sp           # first arguement is pointer to register fram
     call trap_handler
@@ -90,6 +106,10 @@ trap_vector:
     ld t0, 40(sp)
     addi sp, sp, 320
 
+    # Swap back:
+    #   sp       = original user stack pointer
+    #   sscratch = kernel stack pointer
+    csrrw sp, sscratch, sp
     sret
 
 

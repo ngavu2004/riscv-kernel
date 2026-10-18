@@ -4,8 +4,8 @@ _entry:
         # The boot stack must remain in the physical boot image.
         la sp, boot_stack_top
 
-        # delegate u-mode ecall to s-mode
-        li t0, (1 << 8)           # Delegate U-mode ecalls
+        # delegate standard exceptions to S-mode.
+        li      t0, 0xffff
         csrw medeleg, t0
         
         # jump into boot entry

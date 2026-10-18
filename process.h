@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define USER_PROCESS_BASE 0x80100000
-#define USER_PROCESS_SLOT_SIZE 0x1000
 #define USER_PROCESS_SLOT_NUM 4
 
 
