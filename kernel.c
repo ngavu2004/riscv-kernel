@@ -17,8 +17,10 @@ extern unsigned char _binary_user2_elf_start[];
 extern unsigned char _binary_user2_elf_end[];
 extern unsigned char _binary_uart_user_elf_start[];
 extern unsigned char _binary_uart_user_elf_end[];
+extern unsigned char _binary_test_yield_syscall_elf_start[];
+extern unsigned char _binary_test_yield_syscall_elf_end[];
 
-#define UART_USER_PID 2
+#define UART_USER_PID 3
 
 uint64_t min_int(uint64_t a, uint64_t b)
 {
@@ -44,7 +46,7 @@ void kernel_main()
 
     // 1. Load the programs
     // Note: Ideally I would want memcmp here but since this is bare metal and I cant use any C libary, we will make do with this for now
-    unsigned char* elf_headers[] = {_binary_user2_elf_start, _binary_user1_elf_start, _binary_uart_user_elf_start};
+    unsigned char* elf_headers[] = {_binary_test_yield_syscall_elf_start, _binary_user2_elf_start, _binary_user1_elf_start, _binary_uart_user_elf_start};
 
     int count = (int) sizeof(elf_headers)/sizeof(elf_headers[0]);
 

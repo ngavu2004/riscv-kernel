@@ -49,6 +49,8 @@ void trap_handler(process_context_t *frame) {
     }
 
     if (cause == 8) {
+        // if the interrupt was created by ecall, increment the sepc by 4
+        frame->sepc += 4;
         int curr_pid = process_queue_curr_pid();
         switch (frame->reg[17]) {
             case 1: // Print syscall
@@ -67,7 +69,7 @@ void trap_handler(process_context_t *frame) {
                 send((char *)frame->reg[10], curr_pid, (int)frame->reg[11]);
 
                 save_context(curr_pid, frame);
-                block_process(curr_pid); // block the process after send, until the process receive a message back
+                block_process(curr_pid); // block the process after send, until the endpoint receive the message
                 scheduler();
                 break;
             case 3: // Receive message
@@ -82,6 +84,11 @@ void trap_handler(process_context_t *frame) {
                 receive(curr_pid, user_buffer);
 
                 break;
+            case 4: // Yield syscall
+                enqueue(*dequeue()); // pop the process from the front of the queue to the back of the queue while keep the status as READY
+                scheduler();
+                return;
+
             case 10: // Exit
                 uart_putstr("Process exited.\n");
                 process_t *p = find_process(curr_pid);
@@ -93,6 +100,6 @@ void trap_handler(process_context_t *frame) {
     }
     
     uart_putstr("Trap handler called\n");
-    write_sepc(read_sepc() + 4);
+    write_sepc(frame->sepc);
     return;
 }

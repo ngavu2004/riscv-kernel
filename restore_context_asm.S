@@ -2,6 +2,12 @@
 .global restore_context_asm
 .p2align 2
 restore_context_asm:
+    # a0 = saved process_context_t
+    # sp = current kernel stack
+
+    # The next trap must swap to this kernel stack.
+    csrw sscratch, sp
+
     ld ra,  8(a0)
     ld sp, 16(a0)
     ld gp,  24(a0)
@@ -38,10 +44,12 @@ restore_context_asm:
     ld t0, 264(a0)
     csrw sstatus, t0
 
-    ld t0, 40(a0)
+    # Restore the user stack only after sscratch is initialized.
+    ld sp, 16(a0)
 
-    # restore a0 last
-    ld a0,  80(a0)
+    # Restore a0 last because it is the frame pointer.
+    ld a0, 80(a0)
+
     sret
-a0in:
-    j a0in
+yooo:
+    j yooo

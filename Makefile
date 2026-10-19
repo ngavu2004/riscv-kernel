@@ -7,7 +7,7 @@ USER_DIR := user_programs
 KERNEL_C := $(wildcard *.c)
 KERNEL_H := $(wildcard *.h)
 KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
-USER_OBJS := user1elf.o user2elf.o uart_userelf.o
+USER_OBJS := user1elf.o user2elf.o uart_userelf.o test_yield_syscall.o
 
 KERNEL_CFLAGS = -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
 USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
@@ -20,6 +20,9 @@ user1.elf: $(USER_DIR)/user1.S $(USER_DIR)/user1.ld
 user2.elf: $(USER_DIR)/user2.S $(USER_DIR)/user2.ld
 	$(CC) $(USER_CFLAGS) -T $(USER_DIR)/user2.ld -o $@ $(USER_DIR)/user2.S
 
+test_yield_syscall.elf: $(USER_DIR)/test_yield_syscall.S $(USER_DIR)/test_yield_syscall.ld
+	$(CC) $(USER_CFLAGS) -T $(USER_DIR)/test_yield_syscall.ld -o $@ $(USER_DIR)/test_yield_syscall.S
+
 uart_user.elf: $(USER_DIR)/uart_entry.S $(USER_DIR)/uart_user.c $(USER_DIR)/uart_user.h $(USER_DIR)/uart_user.ld
 	$(CC) $(USER_CFLAGS) -I$(USER_DIR) -T $(USER_DIR)/uart_user.ld -o $@ $(USER_DIR)/uart_entry.S $(USER_DIR)/uart_user.c
 
@@ -30,6 +33,9 @@ user2elf.o: user2.elf
 	$(LD) -r -b binary $< -o $@
 
 uart_userelf.o: uart_user.elf
+	$(LD) -r -b binary $< -o $@
+
+test_yield_syscall.o: test_yield_syscall.elf
 	$(LD) -r -b binary $< -o $@
 
 kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(KERNEL_H) kernel.ld $(USER_OBJS)
