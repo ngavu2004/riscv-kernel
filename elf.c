@@ -105,7 +105,7 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry, 
                 for (int page = 0; page<page_count; page++) {
                     // Copy p_filesz bytes from p_offset to the allocated page
                     char *src_addr = (char *)elf_start + curr_p->p_offset + PAGE_SIZE * page;
-                    char *dst_addr = page_allocate();
+                    char *dst_addr = allocate_page();
 
                     if (dst_addr == NULL) {
                         return -1;

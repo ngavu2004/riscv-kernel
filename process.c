@@ -3,17 +3,27 @@
 #include "uart.h"
 #include "memory_management.h"
 
-process_t NULL_PROCESS = {-1, 0, EXIT};
 
-process_queue_t process_q = {
-    .front = -1,
-    .back = 0
-};
+
+process_t NULL_PROCESS = {-1, 0, EXIT};
+process_t process_table[PROCESS_TABLE_CAPACITY];
+queue_t process_q;
+static process_t *process_queue_storage[PROCESS_TABLE_CAPACITY];
+
+void process_queue_init(void)
+{
+    queue_init(
+        &process_q,
+        process_queue_storage,
+        PROCESS_TABLE_CAPACITY
+    );
+}
 
 bool block_process(int pid) {
     // Find the process with the same pid
-    for (int i=0; i < process_q.back; i++) {
-        process_t *p = &process_q.queue[i];
+    for (int i=0; i < PROCESS_TABLE_CAPACITY; i++) {
+        process_t *p = &process_table[i];
+
         if (p->pid == pid) {
             p->state = BLOCKED;
             return true;
@@ -25,56 +35,21 @@ bool block_process(int pid) {
 
 bool unblock_process(int pid) {
     // Find the process with the same pid
-    for (int i=0; i < process_q.back; i++) {
-        process_t *p = &process_q.queue[i];
-        if (p->pid == pid && p->state == BLOCKED ) {
-            p->state = READY;
-            return true;
-        }
+
+    process_t *p = find_process(pid);
+
+    if (p != &NULL_PROCESS && p->state == BLOCKED) {
+        p->state = READY;
+        return true;
     }
 
     return false;
 }
 
-
-int enqueue(process_t p) {
-    // If the queue is already full
-    if (process_queue_is_full()) {
-        return -1;
-    }
-
-    process_q.queue[process_q.back] = p;
-    process_q.back++;
-    return process_q.back;
-}
-
-process_t* front() {
-    if (!process_queue_is_empty()) {
-        process_t* p = &process_q.queue[0];
-        return p;
-    }
-    return &NULL_PROCESS;
-}
-
-process_t* dequeue() {
-    if (!process_queue_is_empty()) {
-        process_t* p = &process_q.queue[0];
-        // Move other processes up
-        if (process_q.back > 1) {
-            for (int i = 1; i < process_q.back; i++) {
-                process_q.queue[i-1] = process_q.queue[i];
-            }
-        }
-        process_q.back --;
-        return p;
-    } else {
-        return &NULL_PROCESS;
-    };
-}
-
 process_t* find_process(int pid) {
-    for (int i=0; i<process_q.back;i++) {
-        process_t *p = &process_q.queue[i];
+    for (int i=0; i < PROCESS_TABLE_CAPACITY;i++) {
+        process_t *p = &process_table[i];
+
         if (p->pid == pid) {
             return p;
         }
@@ -83,9 +58,9 @@ process_t* find_process(int pid) {
 }
 
 void scheduler() {
-    while (!process_queue_is_empty()) {
+    while (!(queue_is_empty(&process_q))) {
         uart_putstr("The process queue is not empty.\n");
-        process_t* p = front();
+        process_t* p = queue_peek(&process_q);
         uart_putstr("Current program pid: ");
         uart_putuint64(p->pid);
         uart_putstr("\n");
@@ -113,13 +88,16 @@ void scheduler() {
 
         } else if (p->state == BLOCKED) {
             // pop the process and put it at end of line
-            enqueue(*dequeue());
+            queue_enqueue(&process_q, queue_dequeue(&process_q));
         } else if (p->state == EXIT) {
-            dequeue(); // remove the EXIT process
+            queue_dequeue(&process_q); // remove the EXIT process
+        } else if (p->state == RUNNING) {
+            uart_putstr("Scheduler found a running process\n");
+            return;
         }
     }
 
-    if (process_queue_is_empty()) {
+    if (queue_is_empty(&process_q)) {
         uart_putstr("No more processes.\n");
         while (1) {
             __asm__ volatile("wfi");
@@ -128,16 +106,9 @@ void scheduler() {
 }
 
 int process_queue_curr_pid() {
-    if (!process_queue_is_empty()) {
-        return process_q.queue[process_q.front+1].pid;
+    if (!queue_is_empty(&process_q)) {
+        process_t * curr_p = queue_peek(&process_q);
+        return curr_p->pid;
     }
     return -1;
-}
-
-bool process_queue_is_empty() {
-    return (process_q.back == 0);
-}
-
-bool process_queue_is_full() {
-    return process_q.back == USER_PROCESS_SLOT_NUM;
 }

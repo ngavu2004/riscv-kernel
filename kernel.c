@@ -20,7 +20,7 @@ extern unsigned char _binary_uart_user_elf_end[];
 extern unsigned char _binary_test_yield_syscall_elf_start[];
 extern unsigned char _binary_test_yield_syscall_elf_end[];
 
-#define UART_USER_PID 3
+#define UART_USER_PID 2
 
 uint64_t min_int(uint64_t a, uint64_t b)
 {
@@ -46,41 +46,45 @@ void kernel_main()
 
     // 1. Load the programs
     // Note: Ideally I would want memcmp here but since this is bare metal and I cant use any C libary, we will make do with this for now
-    unsigned char* elf_headers[] = {_binary_test_yield_syscall_elf_start, _binary_user2_elf_start, _binary_user1_elf_start, _binary_uart_user_elf_start};
+    unsigned char* elf_headers[] = {_binary_user2_elf_start, _binary_user1_elf_start, _binary_uart_user_elf_start};
 
     int count = (int) sizeof(elf_headers)/sizeof(elf_headers[0]);
 
+    // initialize the process queue
+    process_queue_init();
     uart_putstr("== Start loading ");
     uart_putuint64(count);
     uart_putstr(" program(s)==\n");
 
-    for (int i=0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         uart_putstr("\n");
         uart_putstr("Program ");
         uart_putuint64((uint64_t) i);
         uart_putstr(":\n");
 
-        // Create a process
-        process_t p;
-        ElfHeader* elf = elf_headers[i];
-        p.pid = i;
-        p.base_address = elf->e_entry;
-        p.state = PENDING;
-        p.have_saved_context = false;
-        p.root_pt = (uintptr_t) page_allocate();
-        map_kernel_address((pagetable_t *)p.root_pt);
+        // Get the process
+        process_t *p = &process_table[i];
+        ElfHeader *elf = elf_headers[i];
+
+        p->pid = i;
+        p->base_address = elf->e_entry;
+        p->state = PENDING;
+        p->have_saved_context = false;
+        p->root_pt = (uintptr_t) allocate_page();
+
+        map_kernel_address((pagetable_t *)p->root_pt);
 
         // if the index is the index of the UART program
         if (i == UART_USER_PID) {
-            map_user_uart(p.root_pt);
+            map_user_uart(p->root_pt);
         }
 
         // If succeed loading the elf file
-        if (load_elf_header(elf, elf_headers[i], i, p.root_pt) == 0) {
-            p.state = READY;
+        if (load_elf_header(elf, elf_headers[i], i, p->root_pt) == 0) {
+            p->state = READY;
             
             // Put it in the queue
-            enqueue(p);
+            queue_enqueue(&process_q, p);
             uart_putstr("Enqueued program ");
             uart_putuint64((uint64_t) i);
             uart_putstr(".\n");
@@ -94,6 +98,13 @@ void kernel_main()
     uart_putuint64(count);
     uart_putstr(" program(s)==\n");
     
+    // print the queue
+    for (int i = 0; i < process_q.count; i++) {
+        process_t *p = (process_t *) process_q.items[i];
+        uart_putstr("PID: ");
+        uart_putuint64(p->pid);
+        uart_putstr("\n");
+    }
 
     // Execute the process queue
     scheduler();

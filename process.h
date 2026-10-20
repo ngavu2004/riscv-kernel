@@ -3,12 +3,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "my_lib/queue.h"
 
-#define USER_PROCESS_SLOT_NUM 4
+#define PROCESS_TABLE_CAPACITY 16
 
 
 void restore_context(uint64_t pid);
 // Define process states
+// TODO: Change to ACTIVE and EXIT after completely implemented thread
 typedef enum {
     PENDING,
     READY,
@@ -24,6 +26,7 @@ typedef struct {
 } process_context_t;
 
 // Define process struct
+// TODO: update when finish the thread struct 
 typedef struct {
     uint64_t pid;
     uint64_t base_address;
@@ -33,16 +36,13 @@ typedef struct {
     uintptr_t root_pt;
 } process_t;
 
-typedef struct {
-    process_t queue[USER_PROCESS_SLOT_NUM];
-    int front;
-    int back;
-} process_queue_t;
 
 void scheduler();
 // Define process queue and NULL process
 extern process_t NULL_PROCESS;
-extern process_queue_t process_q;
+extern process_t process_table[PROCESS_TABLE_CAPACITY];
+extern queue_t process_q;
+
 
 // process context switch methods
 bool block_process(int pid);
@@ -50,11 +50,7 @@ bool unblock_process(int pid);
 process_t* find_process(int pid);
 
 // Process queue methods
-int enqueue(process_t p);
-process_t* front();
-process_t* dequeue();
-bool process_queue_is_empty();
-bool process_queue_is_full();
+void process_queue_init(void);
 int process_queue_curr_pid(); // return current running process pid
 
 #endif

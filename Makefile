@@ -6,6 +6,8 @@ USER_DIR := user_programs
 
 KERNEL_C := $(wildcard *.c)
 KERNEL_H := $(wildcard *.h)
+LIB_C := $(wildcard my_lib/*.c)
+LIB_H := $(wildcard my_lib/*.h)
 KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
 USER_OBJS := user1elf.o user2elf.o uart_userelf.o test_yield_syscall.o
 
@@ -38,8 +40,8 @@ uart_userelf.o: uart_user.elf
 test_yield_syscall.o: test_yield_syscall.elf
 	$(LD) -r -b binary $< -o $@
 
-kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(KERNEL_H) kernel.ld $(USER_OBJS)
-	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) $(USER_OBJS) -o $@
+kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(USER_OBJS)
+	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(USER_OBJS) -o $@
 
 run: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic

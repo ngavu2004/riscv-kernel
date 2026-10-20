@@ -85,7 +85,14 @@ void trap_handler(process_context_t *frame) {
 
                 break;
             case 4: // Yield syscall
-                enqueue(*dequeue()); // pop the process from the front of the queue to the back of the queue while keep the status as READY
+                process_t *current = queue_dequeue(&process_q);
+
+                if (current != NULL) {
+                    save_context(curr_pid, frame);
+                    current->state = READY;
+                    queue_enqueue(&process_q, current);
+                }
+
                 scheduler();
                 return;
 

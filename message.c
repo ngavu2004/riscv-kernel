@@ -72,7 +72,10 @@ bool send(char* text, int source_pid, int dest_pid) {
 
 void receive(int curr_pid, char *buffer) {
     message_queue_t* q = &mq[curr_pid];
-
+    uart_putstr("Current number of message: ");
+    uart_putuint64(q->message_count);
+    uart_putline("");
+    
     while (q->message_count > 0) {
         int curr_pos = q->message_count - 1;
         message_t* receive_m = q->queue[curr_pos];

@@ -30,8 +30,8 @@ void uart_putuint64(uint64_t num) {
         num /= 10;
     }
 
-    while (i >= 0) {
-        uart_putchar(buffer[i--]);
+    while (i > 0) {
+        uart_putchar(buffer[--i]);
     }
 
 }
