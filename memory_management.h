@@ -11,11 +11,14 @@
 
 #define PTE_PPN_SHIFT 10
 
-
 #define PAGE_SIZE 4096
 #define ENTRY_NUM 512
 #define PAGE_ALLOC_START 0x80400000
 #define PAGE_ALLOC_END   0x80800000
+#define PAGE_COUNT ((PAGE_ALLOC_END - PAGE_ALLOC_START) / PAGE_SIZE)
+#define BITMAP_SIZE ((PAGE_COUNT + 7) / 8) // make sure the bit is rounded up
+
+static uint8_t page_bitmap[BITMAP_SIZE]; // 0 = free; 1 = allocated
 
 extern char __boot_text_start[], __boot_text_end[];
 extern char __text_start[], __text_end[];
@@ -36,8 +39,8 @@ typedef struct {
 } pagetable_t;
 
 
-void *page_allocate(void);
-
+void *allocate_page(void);
+void free_page(void *);
 static inline pte_t pa_to_pte(uintptr_t physical_address, uint64_t flags)
 {
     return ((physical_address >> 12) << PTE_PPN_SHIFT) | flags;

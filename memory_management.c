@@ -1,6 +1,5 @@
 #include "memory_management.h"
 uintptr_t kernel_root_pt;
-static uintptr_t next_free_page = PAGE_ALLOC_START;
 
 static void zero_page(void *page)
 {
@@ -11,17 +10,34 @@ static void zero_page(void *page)
     }
 }
 
-void *page_allocate(void)
+void *allocate_page(void)
 {
-    if (next_free_page >= PAGE_ALLOC_END) {
-        return NULL;
+    for (int i = 0; i < BITMAP_SIZE; i++) {
+        if (page_bitmap[i] != UINT8_MAX) { // if that byte is not full
+            for (int j = 0; j < 8; j++) {
+                // find the first bit that is 0
+                if ((page_bitmap[i] & (uint8_t)(1u << j)) == 0) {
+                    uintptr_t page_address =
+                        (uintptr_t)PAGE_ALLOC_START +
+                        ((8 * i) + j) * (uintptr_t)PAGE_SIZE;
+                    void *page = (void *)page_address;
+                    page_bitmap[i] |= (uint8_t)(1u << j);
+                    zero_page(page);
+                    return page;
+                }
+            }
+        }
     }
 
-    void *page = (void *)next_free_page;
-    next_free_page += PAGE_SIZE;
+    return NULL;
+}
 
-    zero_page(page);
-    return page;
+void free_page(void * page_start) {
+    uint64_t page_index = ((uint64_t) page_start - PAGE_ALLOC_START) / PAGE_SIZE;
+    uint64_t byte_index = page_index / 8;
+    uint8_t bit_index = page_index % 8;
+
+    page_bitmap[byte_index] ^= 1u << bit_index; // set the bit back to 0 with xor
 }
 
 void *memcpy(void *destination, const void *source, size_t size) {
@@ -63,7 +79,7 @@ void map_page(
 
             // If not leaf and not valid, allocated new pt
             if (!is_valid(entry)) {
-                pagetable_t *next_pt = page_allocate();
+                pagetable_t *next_pt = allocate_page();
 
                 if (next_pt == NULL) {
                     uart_putstr("Out of page-table memory\n");
@@ -135,7 +151,7 @@ void map_user_uart(pagetable_t *pt)
 }
 
 uintptr_t create_kernel_pagetable(void) {
-    pagetable_t *root_page_table = page_allocate();
+    pagetable_t *root_page_table = allocate_page();
 
     map_kernel_address(root_page_table);
 
