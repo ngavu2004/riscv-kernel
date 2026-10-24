@@ -4,6 +4,9 @@
 #include <stdint.h>
 #define MPP_BIT_POS 11
 #define SPP_BIT_POS 8
+#define SIE_BIT_POS 1
+#define STIE_BIT_POS 5
+#define STCE_BIT_POS 63
 #define USER_BASE_ADDRESS 0x80400000
 #define USER_SIZE 4096 // 4 KiB
 
@@ -29,6 +32,32 @@ static inline void write_mepc(uint64_t x) {
 static inline void write_sepc(uint64_t x) {
     __asm__ volatile("csrw sepc, %0" : : "r" (x));
 }
+
+static inline void set_stce(uint64_t value) {
+    uint64_t mask = 1ULL << STCE_BIT_POS;
+    if (value & 1ULL) {
+        __asm__ volatile("csrs menvcfg, %0" : : "r"(mask));
+    } else {
+         __asm__ volatile("csrc menvcfg, %0" : : "r"(mask));
+    }
+}
+
+static inline void enable_timer_supervisor_interrupt(void) {
+    __asm__ volatile("csrs sie, %0" : : "r"(1ULL << STIE_BIT_POS));
+}
+
+static inline void enable_supervisor_interrupt(void) {
+    __asm__ volatile("csrs sstatus, %0" : : "r"(1ULL << SIE_BIT_POS));
+}
+
+static inline void enable_supervisor_time_counter(void) {
+    __asm__ volatile("csrs mcounteren, %0" : : "r"(1ULL << 1));
+}
+
+static inline void write_stimecmp(uint64_t value) {
+    __asm__ volatile("csrw stimecmp, %0" : : "r"(value));
+}
+
 static uint64_t align_user_size(uint64_t user_size) {
     uint64_t size = 128;
 
@@ -70,6 +99,12 @@ static inline void write_pmpaddr(unsigned int entry, uint64_t value) {
 static inline uint64_t read_mtval() {
     uint64_t value;
     __asm__ volatile("csrr %0, mtval" : "=r"(value));
+    return value;
+}
+
+static inline uint64_t read_stval(void) {
+    uint64_t value;
+    __asm__ volatile("csrr %0, stval" : "=r"(value));
     return value;
 }
 

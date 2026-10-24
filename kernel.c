@@ -6,6 +6,7 @@
 #include "message.h"
 #include "memory_management.h"
 #include "thread.h"
+#include "timer.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -20,6 +21,10 @@ extern unsigned char _binary_uart_user_elf_start[];
 extern unsigned char _binary_uart_user_elf_end[];
 extern unsigned char _binary_test_yield_syscall_elf_start[];
 extern unsigned char _binary_test_yield_syscall_elf_end[];
+#ifdef TEST_TIMER_PREEMPTION
+extern unsigned char _binary_timer1_elf_start[];
+extern unsigned char _binary_timer2_elf_start[];
+#endif
 
 #define UART_USER_PID 2
 #define USER_STACK_TOP 0x40000000ULL
@@ -74,12 +79,15 @@ void kernel_main()
 
     // 1. Load the programs
     // Note: Ideally I would want memcmp here but since this is bare metal and I cant use any C libary, we will make do with this for now
+#ifdef TEST_TIMER_PREEMPTION
+    unsigned char* elf_headers[] = {_binary_timer1_elf_start, _binary_timer2_elf_start};
+#else
     unsigned char* elf_headers[] = {_binary_user2_elf_start, _binary_user1_elf_start, _binary_uart_user_elf_start};
+#endif
 
     int count = (int) sizeof(elf_headers)/sizeof(elf_headers[0]);
 
     // initialize the process queue
-    process_queue_init();
     init_thread_queue();
     int thread_count = 0;
 
@@ -145,6 +153,9 @@ void kernel_main()
         uart_putuint64(thread->tid);
         uart_putstr("\n");
     }
+
+    // init the timer
+    timer_init();
 
     // Execute the process queue
     scheduler();
