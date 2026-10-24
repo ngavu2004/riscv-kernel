@@ -6,6 +6,7 @@
 #include "process.h"
 #include "message.h"
 #include "uart.h"
+#include "thread.h"
 
 // The basic things that a trap handler has to do:
 // 1. inspect the cause
@@ -13,7 +14,7 @@
 // 3. call UART
 // 4. increase sepc
 
-void trap_handler(process_context_t *frame) {
+void trap_handler(thread_context_t *frame) {
     uint64_t user_a0 = frame->reg[10]; // a0 is x10
     uint64_t user_sp = frame->reg[2];  // sp is x2
     uint64_t user_ra = frame->reg[1];  // ra is x1
@@ -51,7 +52,8 @@ void trap_handler(process_context_t *frame) {
     if (cause == 8) {
         // if the interrupt was created by ecall, increment the sepc by 4
         frame->sepc += 4;
-        int curr_pid = process_queue_curr_pid();
+        thread_t *current_thread = queue_peek(&thread_q);
+        int curr_tid = current_thread == NULL ? -1 : (int)current_thread->tid;
         switch (frame->reg[17]) {
             case 1: // Print syscall
                 uart_putstr("Print syscall called.\n");
@@ -66,10 +68,10 @@ void trap_handler(process_context_t *frame) {
                 uart_putstr("\n");
 
 
-                send((char *)frame->reg[10], curr_pid, (int)frame->reg[11]);
+                send((char *)frame->reg[10], curr_tid, (int)frame->reg[11]);
 
-                save_context(curr_pid, frame);
-                block_process(curr_pid); // block the process after send, until the endpoint receive the message
+                save_context((uint64_t)curr_tid, frame);
+                block_thread((uint64_t)curr_tid); // block the thread after send, until the endpoint receive the message
                 scheduler();
                 break;
             case 3: // Receive message
@@ -81,25 +83,25 @@ void trap_handler(process_context_t *frame) {
                     break;
                 }
 
-                receive(curr_pid, user_buffer);
+                receive(curr_tid, user_buffer);
 
                 break;
             case 4: // Yield syscall
-                process_t *current = queue_dequeue(&process_q);
+                thread_t *current = queue_dequeue(&thread_q);
 
                 if (current != NULL) {
-                    save_context(curr_pid, frame);
+                    save_context((uint64_t)curr_tid, frame);
                     current->state = READY;
-                    queue_enqueue(&process_q, current);
+                    queue_enqueue(&thread_q, current);
                 }
 
                 scheduler();
                 return;
 
             case 10: // Exit
-                uart_putstr("Process exited.\n");
-                process_t *p = find_process(curr_pid);
-                p->state = EXIT;
+                uart_putstr("Thread exited.\n");
+                thread_t *thread = find_thread((uint64_t)curr_tid);
+                thread->state = EXIT;
 
                 scheduler();
                 return; // Important: skip the common sepc += 4 logic

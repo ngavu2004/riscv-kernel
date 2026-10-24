@@ -6,8 +6,8 @@
 
 typedef struct {
 	char message[MESSAGE_SIZE];
-	int source_pid;
-	int dest_pid;
+	int source_tid;
+	int dest_tid;
 } message_t;
 
 typedef struct {
@@ -17,7 +17,7 @@ typedef struct {
 
 extern message_t NULL_MESSAGE;
 
-void initialize_message_queue(int p_num);
+void initialize_message_queue(int thread_num);
 bool message_queue_is_full(message_queue_t q);
-bool send(char *message, int source_pid, int dest_pid);
-void receive(int pid, char *buffer);
+bool send(char *message, int source_tid, int dest_tid);
+void receive(int tid, char *buffer);

@@ -2,7 +2,7 @@
 .global restore_context_asm
 .p2align 2
 restore_context_asm:
-    # a0 = saved process_context_t
+    # a0 = saved thread_context *
     # sp = current kernel stack
 
     # The next trap must swap to this kernel stack.

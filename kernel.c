@@ -5,6 +5,7 @@
 #include "pmp.h"
 #include "message.h"
 #include "memory_management.h"
+#include "thread.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -21,10 +22,37 @@ extern unsigned char _binary_test_yield_syscall_elf_start[];
 extern unsigned char _binary_test_yield_syscall_elf_end[];
 
 #define UART_USER_PID 2
+#define USER_STACK_TOP 0x40000000ULL
+#define SSTATUS_SPIE   (1ULL << 5)
 
 uint64_t min_int(uint64_t a, uint64_t b)
 {
     return (a < b) ? a : b;
+}
+
+static bool initialize_main_thread(process_t *process, thread_t *thread)
+{
+    void *stack_page = allocate_page();
+
+    if (stack_page == NULL) {
+        return false;
+    }
+
+    map_page(
+        (pagetable_t *)process->root_pt,
+        USER_STACK_TOP - PAGE_SIZE,
+        (uintptr_t)stack_page,
+        1,
+        PTE_V | PTE_R | PTE_W | PTE_U
+    );
+
+    thread->pid = process->pid;
+    thread->state = READY;
+    thread->context.sepc = process->base_address;
+    thread->context.reg[2] = USER_STACK_TOP & ~0xFULL;
+    thread->context.sstatus = SSTATUS_SPIE;
+
+    return true;
 }
 
 // stack smash protector test function
@@ -52,6 +80,9 @@ void kernel_main()
 
     // initialize the process queue
     process_queue_init();
+    init_thread_queue();
+    int thread_count = 0;
+
     uart_putstr("== Start loading ");
     uart_putuint64(count);
     uart_putstr(" program(s)==\n");
@@ -64,45 +95,54 @@ void kernel_main()
 
         // Get the process
         process_t *p = &process_table[i];
-        ElfHeader *elf = elf_headers[i];
+        ElfHeader *elf = (ElfHeader *)elf_headers[i];
 
         p->pid = i;
         p->base_address = elf->e_entry;
-        p->state = PENDING;
-        p->have_saved_context = false;
+        p->state = PROCESS_ACTIVE;
         p->root_pt = (uintptr_t) allocate_page();
 
         map_kernel_address((pagetable_t *)p->root_pt);
 
         // if the index is the index of the UART program
         if (i == UART_USER_PID) {
-            map_user_uart(p->root_pt);
+            map_user_uart((pagetable_t *)p->root_pt);
         }
 
         // If succeed loading the elf file
         if (load_elf_header(elf, elf_headers[i], i, p->root_pt) == 0) {
-            p->state = READY;
-            
-            // Put it in the queue
-            queue_enqueue(&process_q, p);
-            uart_putstr("Enqueued program ");
-            uart_putuint64((uint64_t) i);
-            uart_putstr(".\n");
+            p->state = PROCESS_ACTIVE;
+
+            // create 1 main thread for each process
+            thread_t *p_main_thread = &thread_table[thread_count];
+
+            if (!initialize_main_thread(p, p_main_thread)) {
+                uart_putstr("Failed to create user thread\n");
+                // TODO: Mark the process as failed and clean            }
+            } else{
+                // Assign an id to the thread and Put it in the queue
+                p_main_thread->tid = thread_count;
+                queue_enqueue(&thread_q, p_main_thread);
+                thread_count++;
+                uart_putstr("Enqueued thread ");
+                uart_putuint64((uint64_t) p_main_thread->tid);
+                uart_putstr(".\n");
+            }
         }
     }
 
     // Set up the message queue
-    initialize_message_queue(count);
+    initialize_message_queue(thread_count);
 
     uart_putstr("== Finished loading ");
     uart_putuint64(count);
     uart_putstr(" program(s)==\n");
     
     // print the queue
-    for (int i = 0; i < process_q.count; i++) {
-        process_t *p = (process_t *) process_q.items[i];
-        uart_putstr("PID: ");
-        uart_putuint64(p->pid);
+    for (int i = 0; i < thread_q.count; i++) {
+        thread_t *thread = (thread_t *) thread_q.items[i];
+        uart_putstr("TID: ");
+        uart_putuint64(thread->tid);
         uart_putstr("\n");
     }
 
