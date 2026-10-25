@@ -9,8 +9,7 @@ KERNEL_H := $(wildcard *.h)
 LIB_C := $(wildcard my_lib/*.c)
 LIB_H := $(wildcard my_lib/*.h)
 KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
-USER_OBJS := user1elf.o user2elf.o uart_userelf.o test_yield_syscall.o
-TEST_TIMER_OBJS := timer1elf.o timer2elf.o
+USER_OBJS := user1elf.o user2elf.o uart_userelf.o
 
 KERNEL_CFLAGS = -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
 USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
@@ -22,15 +21,6 @@ user1.elf: $(USER_DIR)/user1.S $(USER_DIR)/user1.ld
 
 user2.elf: $(USER_DIR)/user2.S $(USER_DIR)/user2.ld
 	$(CC) $(USER_CFLAGS) -T $(USER_DIR)/user2.ld -o $@ $(USER_DIR)/user2.S
-
-test_yield_syscall.elf: $(USER_DIR)/test_yield_syscall.S $(USER_DIR)/test_yield_syscall.ld
-	$(CC) $(USER_CFLAGS) -T $(USER_DIR)/test_yield_syscall.ld -o $@ $(USER_DIR)/test_yield_syscall.S
-
-timer1.elf: test_timer_preemption/timer1.S test_timer_preemption/timer.ld
-	$(CC) $(USER_CFLAGS) -T test_timer_preemption/timer.ld -o $@ test_timer_preemption/timer1.S
-
-timer2.elf: test_timer_preemption/timer2.S test_timer_preemption/timer.ld
-	$(CC) $(USER_CFLAGS) -T test_timer_preemption/timer.ld -o $@ test_timer_preemption/timer2.S
 
 uart_user.elf: $(USER_DIR)/uart_entry.S $(USER_DIR)/uart_user.c $(USER_DIR)/uart_user.h $(USER_DIR)/uart_user.ld
 	$(CC) $(USER_CFLAGS) -I$(USER_DIR) -T $(USER_DIR)/uart_user.ld -o $@ $(USER_DIR)/uart_entry.S $(USER_DIR)/uart_user.c
@@ -44,26 +34,11 @@ user2elf.o: user2.elf
 uart_userelf.o: uart_user.elf
 	$(LD) -r -b binary $< -o $@
 
-test_yield_syscall.o: test_yield_syscall.elf
-	$(LD) -r -b binary $< -o $@
-
-timer1elf.o: timer1.elf
-	$(LD) -r -b binary $< -o $@
-
-timer2elf.o: timer2.elf
-	$(LD) -r -b binary $< -o $@
-
 kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(USER_OBJS)
 	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(USER_OBJS) -o $@
 
-kernel_timer.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(TEST_TIMER_OBJS)
-	$(CC) $(KERNEL_CFLAGS) -DTEST_TIMER_PREEMPTION -T kernel.ld $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(TEST_TIMER_OBJS) -o $@
-
 run: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic
-
-test_timer: kernel_timer.elf
-	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic -S -s
 
 debug: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic -S -s
@@ -72,4 +47,4 @@ gdb:
 	gdb-multiarch kernel.elf -ex "target remote localhost:1234"
 
 clean:
-	rm -f user1.elf user2.elf uart_user.elf timer1.elf timer2.elf $(USER_OBJS) $(TEST_TIMER_OBJS) kernel.elf kernel_timer.elf
+	rm -f user1.elf user2.elf uart_user.elf $(USER_OBJS) kernel.elf
