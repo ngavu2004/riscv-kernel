@@ -21,37 +21,10 @@ extern unsigned char _binary_uart_user_elf_start[];
 extern unsigned char _binary_uart_user_elf_end[];
 
 #define UART_USER_PID 2
-#define USER_STACK_TOP 0x40000000ULL
-#define SSTATUS_SPIE   (1ULL << 5)
 
 uint64_t min_int(uint64_t a, uint64_t b)
 {
     return (a < b) ? a : b;
-}
-
-static bool initialize_main_thread(process_t *process, thread_t *thread)
-{
-    void *stack_page = allocate_page();
-
-    if (stack_page == NULL) {
-        return false;
-    }
-
-    map_page(
-        (pagetable_t *)process->root_pt,
-        USER_STACK_TOP - PAGE_SIZE,
-        (uintptr_t)stack_page,
-        1,
-        PTE_V | PTE_R | PTE_W | PTE_U
-    );
-
-    thread->pid = process->pid;
-    thread->state = READY;
-    thread->context.sepc = process->base_address;
-    thread->context.reg[2] = USER_STACK_TOP & ~0xFULL;
-    thread->context.sstatus = SSTATUS_SPIE;
-
-    return true;
 }
 
 // stack smash protector test function

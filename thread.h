@@ -7,6 +7,8 @@
 
 #define MAX_THREAD_NUM 16
 
+typedef struct process process_t;
+
 typedef enum {
     PENDING,
     READY,
@@ -36,6 +38,7 @@ extern queue_t thread_q;
 bool block_thread(uint64_t tid);
 bool unblock_thread(uint64_t tid);
 thread_t *find_thread(uint64_t tid);
+bool initialize_main_thread(process_t *process, thread_t *thread);
 
 
 void init_thread_queue(void);
