@@ -1,25 +1,23 @@
 #include "context_switch.h"
+#include "uart.h"
+#include "thread.h"
 
-extern process_queue_t process_q;
-void save_context(uint64_t pid, process_context_t *frame) {
-    // Find the process in the process queue
-    for(int i = 0; i< process_q.back; i++) {
-        process_t *p = &process_q.queue[i];
-        if (p->pid == pid) {
-            // Initialize the save context
+void save_context(uint64_t tid, thread_context_t *frame) {
+    thread_t *thread = find_thread(tid);
 
-            p->have_saved_context = true;
-            p->saved_context = *frame;
-        }
-    }
-}
-
-void restore_context(uint64_t pid) {
-    process_t *process = find_process(pid);
-
-    if (process == &NULL_PROCESS) {
+    if (thread == &NULL_THREAD) {
         return;
     }
 
-    restore_context_asm(&process->saved_context);
+    thread->context = *frame;
+}
+
+void restore_context(uint64_t tid) {
+    thread_t *t = find_thread(tid);
+
+    if (t == &NULL_THREAD) {
+        return;
+    }
+
+    restore_context_asm(&t->context);
 }

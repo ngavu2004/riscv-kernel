@@ -7,6 +7,10 @@ _entry:
         # delegate standard exceptions to S-mode.
         li      t0, 0xffff
         csrw medeleg, t0
+
+        # Delegate supervisor timer interrupts to S-mode.
+        li      t0, (1 << 5)
+        csrs    mideleg, t0
         
         # jump into boot entry
         call boot_main

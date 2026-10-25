@@ -1,80 +1,35 @@
 #include "csr.h"
 #include "process.h"
+#include "thread.h"
 #include "uart.h"
 #include "memory_management.h"
+#include "context_switch.h"
 
-process_t NULL_PROCESS = {-1, 0, EXIT};
 
-process_queue_t process_q = {
-    .front = -1,
-    .back = 0
+
+process_t NULL_PROCESS = {
+    .pid = UINT64_MAX,
+    .base_address = 0,
+    .state = PROCESS_EXIT,
+    .root_pt = 0
 };
+process_t process_table[PROCESS_TABLE_CAPACITY];
+queue_t process_q;
+static void *process_queue_storage[PROCESS_TABLE_CAPACITY];
 
-bool block_process(int pid) {
-    // Find the process with the same pid
-    for (int i=0; i < process_q.back; i++) {
-        process_t *p = &process_q.queue[i];
-        if (p->pid == pid) {
-            p->state = BLOCKED;
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool unblock_process(int pid) {
-    // Find the process with the same pid
-    for (int i=0; i < process_q.back; i++) {
-        process_t *p = &process_q.queue[i];
-        if (p->pid == pid && p->state == BLOCKED ) {
-            p->state = READY;
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
-int enqueue(process_t p) {
-    // If the queue is already full
-    if (process_queue_is_full()) {
-        return -1;
-    }
-
-    process_q.queue[process_q.back] = p;
-    process_q.back++;
-    return process_q.back;
-}
-
-process_t* front() {
-    if (!process_queue_is_empty()) {
-        process_t* p = &process_q.queue[0];
-        return p;
-    }
-    return &NULL_PROCESS;
-}
-
-process_t* dequeue() {
-    if (!process_queue_is_empty()) {
-        process_t* p = &process_q.queue[0];
-        // Move other processes up
-        if (process_q.back > 1) {
-            for (int i = 1; i < process_q.back; i++) {
-                process_q.queue[i-1] = process_q.queue[i];
-            }
-        }
-        process_q.back --;
-        return p;
-    } else {
-        return &NULL_PROCESS;
-    };
+void process_queue_init(void)
+{
+    queue_init(
+        &process_q,
+        process_queue_storage,
+        PROCESS_TABLE_CAPACITY
+    );
 }
 
 process_t* find_process(int pid) {
-    for (int i=0; i<process_q.back;i++) {
-        process_t *p = &process_q.queue[i];
+    for (int i=0; i < PROCESS_TABLE_CAPACITY;i++) {
+        process_t *p = &process_table[i];
+
         if (p->pid == pid) {
             return p;
         }
@@ -83,44 +38,39 @@ process_t* find_process(int pid) {
 }
 
 void scheduler() {
-    while (!process_queue_is_empty()) {
-        uart_putstr("The process queue is not empty.\n");
-        process_t* p = front();
-        uart_putstr("Current program pid: ");
-        uart_putuint64(p->pid);
+    while (!(queue_is_empty(&thread_q))) {
+        uart_putstr("The thread queue is not empty.\n");
+        thread_t* t = queue_peek(&thread_q);
+
+        uart_putstr("Current program tid: ");
+        uart_putuint64(t->tid);
         uart_putstr("\n");
         
-        if (p->state == READY) {
+        if (t->state == READY) {
             uart_putstr("\n");
-            uart_putstr("=== Start executing program ");
-            uart_putuint64(p->pid);
+            uart_putstr("=== Start executing thread ");
+            uart_putuint64(t->tid);
             uart_putstr(" ===\n");
 
-            // Update the satp
+            // Update the satp to the thread process pt
+            process_t* p = find_process(t->pid);
             switch_page_table(p->root_pt);
 
-            p->state = RUNNING;
-            if (p->have_saved_context == true) {
-                restore_context(p->pid); // restore context will write sepc to the sepc saved in saved_context
-            } else {
-                write_sepc(p->base_address); // else jump to the entry of the program
-                // spp = 0 -> U-mode
-                set_spp(0);
-                // save the current stack pointer and execute sret
-                __asm__ __volatile__("csrw sscratch, sp" ::: "memory");
-                __asm__ __volatile__("sret");
-            }
-
-        } else if (p->state == BLOCKED) {
+            t->state = RUNNING;
+            restore_context(t->tid);
+        } else if (t->state == BLOCKED) {
             // pop the process and put it at end of line
-            enqueue(*dequeue());
-        } else if (p->state == EXIT) {
-            dequeue(); // remove the EXIT process
+            queue_enqueue(&thread_q, queue_dequeue(&thread_q));
+        } else if (t->state == EXIT) {
+            queue_dequeue(&thread_q); // remove the exited thread
+        } else if (t->state == RUNNING) {
+            uart_putstr("Scheduler found a running process\n");
+            return;
         }
     }
 
-    if (process_queue_is_empty()) {
-        uart_putstr("No more processes.\n");
+    if (queue_is_empty(&thread_q)) {
+        uart_putstr("No more active threads.\n");
         while (1) {
             __asm__ volatile("wfi");
         }
@@ -128,16 +78,9 @@ void scheduler() {
 }
 
 int process_queue_curr_pid() {
-    if (!process_queue_is_empty()) {
-        return process_q.queue[process_q.front+1].pid;
+    if (!queue_is_empty(&process_q)) {
+        process_t * curr_p = queue_peek(&process_q);
+        return curr_p->pid;
     }
     return -1;
-}
-
-bool process_queue_is_empty() {
-    return (process_q.back == 0);
-}
-
-bool process_queue_is_full() {
-    return process_q.back == USER_PROCESS_SLOT_NUM;
 }

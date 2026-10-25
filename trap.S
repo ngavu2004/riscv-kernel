@@ -71,6 +71,9 @@ trap_vector:
     mv a0, sp           # first arguement is pointer to register fram
     call trap_handler
 
+    ld t0, 264(sp)
+    csrw sstatus, t0
+    
     # Restore registers before return to user program
     ld ra,  8(sp)
     ld gp,  24(sp)

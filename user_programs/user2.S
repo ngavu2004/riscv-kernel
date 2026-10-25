@@ -8,7 +8,7 @@ _start:
 
     la a0, message
     li a1, 0
-    li a7, 2
+    li a7, 3
     ecall
 
     li a7, 10
