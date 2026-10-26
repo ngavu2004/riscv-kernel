@@ -15,11 +15,18 @@ void timer_init(void)
     next_deadline = timer_now() + TIMER_SLICE;
     write_stimecmp(next_deadline);
     enable_timer_supervisor_interrupt();
-    enable_supervisor_interrupt();
 }
 
 void timer_rearm(void)
 {
+    uint64_t now = timer_now();
     next_deadline += TIMER_SLICE;
+    
+    if (next_deadline <= now) {
+        next_deadline = now + TIMER_SLICE;
+    } else {
+        next_deadline += TIMER_SLICE;
+    }
+
     write_stimecmp(next_deadline);
 }

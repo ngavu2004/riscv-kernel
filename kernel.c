@@ -7,6 +7,7 @@
 #include "memory_management.h"
 #include "thread.h"
 #include "timer.h"
+#include "hart.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -116,6 +117,9 @@ void kernel_main()
         uart_putuint64(thread->tid);
         uart_putstr("\n");
     }
+
+    // release the secondary hart after finish setting up shared resources
+    release_hart(1);
 
     // init the timer
     timer_init();

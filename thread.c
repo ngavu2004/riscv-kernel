@@ -3,7 +3,9 @@
 #include "process.h"
 
 #define USER_STACK_TOP 0x40000000ULL
+#define SSTATUS_SIE  (1ULL << 1)
 #define SSTATUS_SPIE   (1ULL << 5)
+#define SSTATUS_SPP  (1ULL << 8)
 
 thread_t thread_table[MAX_THREAD_NUM];
 queue_t thread_q;

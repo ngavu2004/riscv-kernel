@@ -1,8 +1,13 @@
 .section .text.boot
 .global _entry
 _entry: 
-        # The boot stack must remain in the physical boot image.
-        la sp, boot_stack_top
+        # Select a private boot stack for this hart.
+        csrr t0, mhartid
+        la   sp, boot_stacks
+        li   t1, 4096
+        addi t0, t0, 1
+        mul  t0, t0, t1
+        add  sp, sp, t0
 
         # delegate standard exceptions to S-mode.
         li      t0, 0xffff
@@ -21,6 +26,6 @@ spin:
 .section .bss.boot
 .align 12
 
-boot_stack:
-    .space 4096
-boot_stack_top:
+boot_stacks:
+    .space 4096 * 2
+boot_stack_tops:

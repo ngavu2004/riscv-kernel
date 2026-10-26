@@ -1,6 +1,7 @@
 #include "hart.h"
 
 hart_t hart_table[MAX_HART_NUM];
+volatile bool hart_release_table[MAX_HART_NUM];
 static void *hart_thread_queue_storage[MAX_HART_NUM][MAX_THREAD_NUM];
 
 void init_hart_table(void)
@@ -26,4 +27,24 @@ hart_t *find_hart(uint64_t hart_id)
     }
 
     return &hart_table[hart_id];
+}
+
+void wait_for_hart(int hart_id)
+{
+    if (hart_id < 0 || hart_id >= MAX_HART_NUM) {
+        return;
+    }
+
+    while (!__atomic_load_n(&hart_release_table[hart_id], __ATOMIC_ACQUIRE)) {
+        __asm__ volatile("nop");
+    }
+}
+
+void release_hart(int hart_id)
+{
+    if (hart_id < 0 || hart_id >= MAX_HART_NUM) {
+        return;
+    }
+
+    __atomic_store_n(&hart_release_table[hart_id], true, __ATOMIC_RELEASE);
 }

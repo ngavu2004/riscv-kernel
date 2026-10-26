@@ -2,6 +2,9 @@
 .global trap_vector
 .p2align 2
 trap_vector:
+    # disable supervisor interrupt before handling syscalls or exceptions
+    csrc sstatus, 2
+    
     # Before the trap:
     #   sp       = user stack pointer
     #   sscratch = kernel stack pointer

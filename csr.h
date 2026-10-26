@@ -15,6 +15,15 @@ typedef struct {
     uint64_t exception_code;
 } mcause_value_t;
 
+static inline uint64_t read_mhartid(void)
+{
+    uint64_t hart_id;
+
+    __asm__ volatile("csrr %0, mhartid" : "=r"(hart_id));
+
+    return hart_id;
+}
+
 static inline void write_mtvec(uint64_t x) {
     __asm__ volatile("csrw mtvec, %0" : : "r"(x));
 }

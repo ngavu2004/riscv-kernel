@@ -38,10 +38,10 @@ kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(
 	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(USER_OBJS) -o $@
 
 run: kernel.elf
-	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic
+	qemu-system-riscv64 -machine virt -smp 2 -bios none -kernel $< -nographic
 
 debug: kernel.elf
-	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic -S -s
+	qemu-system-riscv64 -machine virt -smp 2 -bios none -kernel $< -nographic -S -s
 
 gdb:
 	gdb-multiarch kernel.elf -ex "target remote localhost:1234"

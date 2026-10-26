@@ -1,0 +1,40 @@
+riscv64-unknown-elf-gcc -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany -T user_programs/user1.ld -o user1.elf user_programs/user1.S
+riscv64-unknown-elf-ld -r -b binary user1.elf -o user1elf.o
+riscv64-unknown-elf-gcc -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany -T user_programs/user2.ld -o user2.elf user_programs/user2.S
+riscv64-unknown-elf-ld -r -b binary user2.elf -o user2elf.o
+riscv64-unknown-elf-gcc -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany -Iuser_programs -T user_programs/uart_user.ld -o uart_user.elf user_programs/uart_entry.S user_programs/uart_user.c
+riscv64-unknown-elf-ld -r -b binary uart_user.elf -o uart_userelf.o
+riscv64-unknown-elf-gcc -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany -T kernel.ld  boot.S kernel_entry.S trap.S restore_context_asm.S boot.c context_switch.c elf.c hart.c kernel.c memory_management.c message.c mtrap.c pmp.c process.c stack_smash_protector.c thread.c timer.c trap.c uart.c my_lib/queue.c user1elf.o user2elf.o uart_userelf.o -o kernel.elf
+qemu-system-riscv64 -machine virt -smp 2 -bios none -kernel kernel.elf -nographic
+
+==== Finshed booting! Jumping to the kernel! ====
+== Start loading 3 program(s)==
+
+Program 0:
+Valid ELF file!
+Load segment: 0x0000000000000000
+Finished copy the load segments
+Enqueued thread 0.
+
+Program 1:
+Valid ELF file!
+Load segment: 0x0000000000000000
+Finished copy the load segments
+Enqueued thread 1.
+
+Program 2:
+Valid ELF file!
+Load segment: 0x0000000000000000
+Load segment: 0x0000000000002000
+Finished copy the load segments
+Enqueued thread 2.
+== Finished loading 3 program(s)==
+TID: 0
+TID: 1
+TID: 2
+The thread queue is not empty.
+User a0: 0x0000000000000000
+Scause value:0x000000000000000f
+Store page fault at: 0xfffffffffffffec0
+QEMU 8.2.2 monitor - type 'help' for more information
+(qemu) q[K
