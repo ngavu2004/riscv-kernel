@@ -74,7 +74,7 @@ void secondary_hart_boot(void)
     hart->current_thread = &NULL_THREAD;
     hart->stack_pointer = 0;
 
-    uart_putstr("Secondary hart is running in parallel.\n");
+    // uart_putstr("Secondary hart is running in parallel.\n");
 
     while (1) {
         __asm__ volatile("wfi");

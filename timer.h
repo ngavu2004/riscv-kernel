@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define TIMER_SLICE 100000ULL
+#define TIMER_SLICE 200000ULL
 
 void timer_init(void);
 void timer_rearm(void);
