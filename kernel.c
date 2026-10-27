@@ -38,7 +38,7 @@ uint64_t min_int(uint64_t a, uint64_t b)
 //     }
 // }
 
-void kernel_main()
+static void main_hart_kernel(void)
 {
     // == Test: if stack smashing protector works ==
     // uart_putstr("Start SSP test..\n");
@@ -51,9 +51,9 @@ void kernel_main()
 
     int count = (int) sizeof(elf_headers)/sizeof(elf_headers[0]);
 
-    // initialize the process queue
-    init_thread_queue();
     int thread_count = 0;
+    queue_t *main_thread_queue = &find_hart(MAIN_HARTID)->thread_queue;
+    queue_t *secondary_thread_queue = &find_hart(1)->thread_queue;
 
     uart_putstr("== Start loading ");
     uart_putuint64(count);
@@ -94,7 +94,9 @@ void kernel_main()
             } else{
                 // Assign an id to the thread and Put it in the queue
                 p_main_thread->tid = thread_count;
-                queue_enqueue(&thread_q, p_main_thread);
+                queue_t *thread_queue =
+                    i == UART_USER_PID ? secondary_thread_queue : main_thread_queue;
+                queue_enqueue(thread_queue, p_main_thread);
                 thread_count++;
                 uart_putstr("Enqueued thread ");
                 uart_putuint64((uint64_t) p_main_thread->tid);
@@ -111,23 +113,44 @@ void kernel_main()
     uart_putstr(" program(s)==\n");
     
     // print the queue
-    for (int i = 0; i < thread_q.count; i++) {
-        thread_t *thread = (thread_t *) thread_q.items[i];
+    for (int i = 0; i < main_thread_queue->count; i++) {
+        thread_t *thread = (thread_t *) main_thread_queue->items[i];
         uart_putstr("TID: ");
         uart_putuint64(thread->tid);
         uart_putstr("\n");
     }
 
-    // release the secondary hart after finish setting up shared resources
+    // release the secondary harts after finish setting up shared resources
     release_hart(1);
 
-    // init the timer
+    // The main hart runs the user programs.
     timer_init();
-
-    // Execute the process queue
     scheduler();
-    
-    while (1)
-    {
+}
+
+static void secondary_hart_kernel(uint64_t hart_id)
+{
+    queue_t *thread_queue = &find_hart(hart_id)->thread_queue;
+
+    uart_putstr("Secondary hart is running in parallel.\n");
+    uart_putstr("The secondary hart queue contains ");
+    uart_putuint64((uint64_t)thread_queue->count);
+    uart_putstr(" thread(s).\n");
+
+    timer_init();
+    scheduler();
+}
+
+void kernel_main(uint64_t hart_id)
+{
+    // set the global hart id
+    current_hart_id = hart_id;
+    if (hart_id == MAIN_HARTID) {
+        main_hart_kernel();
+    } else {
+        secondary_hart_kernel(hart_id);
+    }
+
+    while (1) {
     }
 }

@@ -1,7 +1,9 @@
 #include "hart.h"
+#include "csr.h"
 
 hart_t hart_table[MAX_HART_NUM];
 volatile bool hart_release_table[MAX_HART_NUM];
+uint64_t current_hart_id;
 static void *hart_thread_queue_storage[MAX_HART_NUM][MAX_THREAD_NUM];
 
 void init_hart_table(void)
@@ -29,22 +31,30 @@ hart_t *find_hart(uint64_t hart_id)
     return &hart_table[hart_id];
 }
 
-void wait_for_hart(int hart_id)
+void wait_for_hart(uint64_t hart_id)
 {
-    if (hart_id < 0 || hart_id >= MAX_HART_NUM) {
+    if (hart_id >= MAX_HART_NUM) {
         return;
     }
 
+    // use nop since wfi will wait for next interrupt instead of polling
     while (!__atomic_load_n(&hart_release_table[hart_id], __ATOMIC_ACQUIRE)) {
         __asm__ volatile("nop");
     }
 }
 
-void release_hart(int hart_id)
+void release_hart(uint64_t hart_id)
 {
-    if (hart_id < 0 || hart_id >= MAX_HART_NUM) {
+    if (hart_id >= MAX_HART_NUM) {
         return;
     }
 
     __atomic_store_n(&hart_release_table[hart_id], true, __ATOMIC_RELEASE);
+}
+
+queue_t *current_hart_thread_queue(void)
+{
+    hart_t *hart = find_hart(current_hart_id);
+
+    return hart == 0 ? 0 : &hart->thread_queue;
 }

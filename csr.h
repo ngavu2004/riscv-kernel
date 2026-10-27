@@ -24,6 +24,20 @@ static inline uint64_t read_mhartid(void)
     return hart_id;
 }
 
+static inline uint64_t read_sp(void)
+{
+    uint64_t stack_pointer;
+
+    __asm__ volatile("mv %0, sp" : "=r"(stack_pointer));
+
+    return stack_pointer;
+}
+
+static inline void write_a0(uint64_t value)
+{
+    __asm__ volatile("mv a0, %0" : : "r"(value) : "a0");
+}
+
 static inline void write_mtvec(uint64_t x) {
     __asm__ volatile("csrw mtvec, %0" : : "r"(x));
 }

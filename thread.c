@@ -1,6 +1,7 @@
 #include "thread.h"
 #include "memory_management.h"
 #include "process.h"
+#include "hart.h"
 
 #define USER_STACK_TOP 0x40000000ULL
 #define SSTATUS_SIE  (1ULL << 1)
@@ -8,7 +9,6 @@
 #define SSTATUS_SPP  (1ULL << 8)
 
 thread_t thread_table[MAX_THREAD_NUM];
-queue_t thread_q;
 
 thread_t NULL_THREAD = {
     .pid = UINT64_MAX,
@@ -16,8 +16,6 @@ thread_t NULL_THREAD = {
     .state = EXIT,
     .context = {0}
 };
-
-static void *thread_queue_storage[MAX_THREAD_NUM];
 
 bool initialize_main_thread(process_t *process, thread_t *thread)
 {
@@ -42,11 +40,6 @@ bool initialize_main_thread(process_t *process, thread_t *thread)
     thread->context.sstatus = SSTATUS_SPIE;
 
     return true;
-}
-
-void init_thread_queue(void)
-{
-    queue_init(&thread_q, thread_queue_storage, MAX_THREAD_NUM);
 }
 
 thread_t *find_thread(uint64_t tid)
@@ -86,7 +79,8 @@ bool unblock_thread(uint64_t tid)
 
 int current_thread_pid(void)
 {
-    thread_t *thread = queue_peek(&thread_q);
+    queue_t *thread_queue = current_hart_thread_queue();
+    thread_t *thread = thread_queue == 0 ? 0 : queue_peek(thread_queue);
 
     if (thread == NULL) {
         return -1;

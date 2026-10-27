@@ -8,6 +8,7 @@
 #include "uart.h"
 #include "thread.h"
 #include "timer.h"
+#include "hart.h"
 
 // The basic things that a trap handler has to do:
 // 1. inspect the cause
@@ -16,6 +17,13 @@
 // 4. increase sepc
 
 void trap_handler(thread_context_t *frame) {
+    queue_t *thread_queue = current_hart_thread_queue();
+
+    if (thread_queue == 0) {
+        uart_putstr("Trap handler could not find the current hart.\n");
+        return;
+    }
+
     uint64_t user_a0 = frame->reg[10]; // a0 is x10
     uint64_t user_sp = frame->reg[2];  // sp is x2
     uint64_t user_ra = frame->reg[1];  // ra is x1
@@ -36,12 +44,12 @@ void trap_handler(thread_context_t *frame) {
             uart_putline("Timer interrupt!");
 
             // Save context of current running thread, set status to READY, and put it at the end of the queue
-            thread_t *current = queue_dequeue(&thread_q);
+            thread_t *current = queue_dequeue(thread_queue);
 
             if (current != NULL) {
                 save_context(current->tid, frame);
                 current->state = READY;
-                queue_enqueue(&thread_q, current);
+                queue_enqueue(thread_queue, current);
             }
 
             timer_rearm();
@@ -72,7 +80,7 @@ void trap_handler(thread_context_t *frame) {
         if (cause == 8) {
             // if the interrupt was created by ecall, increment the sepc by 4
             frame->sepc += 4;
-            thread_t *current_thread = queue_peek(&thread_q);
+            thread_t *current_thread = queue_peek(thread_queue);
             int curr_tid = current_thread == NULL ? -1 : (int)current_thread->tid;
             switch (frame->reg[17]) {
                 case 1: // Print syscall
@@ -107,12 +115,12 @@ void trap_handler(thread_context_t *frame) {
 
                     break;
                 case 4: // Yield syscall
-                    thread_t *current = queue_dequeue(&thread_q);
+                    thread_t *current = queue_dequeue(thread_queue);
 
                     if (current != NULL) {
                         save_context((uint64_t)curr_tid, frame);
                         current->state = READY;
-                        queue_enqueue(&thread_q, current);
+                        queue_enqueue(thread_queue, current);
                     }
 
                     scheduler();
