@@ -90,3 +90,5 @@ void map_page(
 void map_user_uart(pagetable_t *pt);
 
 void *memcpy(void *destination, const void *source, size_t size);
+
+uintptr_t lookup_physical_page(pagetable_t* root, uintptr_t va);
