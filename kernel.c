@@ -7,6 +7,8 @@
 #include "memory_management.h"
 #include "thread.h"
 #include "timer.h"
+#include "hart.h"
+#include "uart.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -21,37 +23,10 @@ extern unsigned char _binary_uart_user_elf_start[];
 extern unsigned char _binary_uart_user_elf_end[];
 
 #define UART_USER_PID 2
-#define USER_STACK_TOP 0x40000000ULL
-#define SSTATUS_SPIE   (1ULL << 5)
 
 uint64_t min_int(uint64_t a, uint64_t b)
 {
     return (a < b) ? a : b;
-}
-
-static bool initialize_main_thread(process_t *process, thread_t *thread)
-{
-    void *stack_page = allocate_page();
-
-    if (stack_page == NULL) {
-        return false;
-    }
-
-    map_page(
-        (pagetable_t *)process->root_pt,
-        USER_STACK_TOP - PAGE_SIZE,
-        (uintptr_t)stack_page,
-        1,
-        PTE_V | PTE_R | PTE_W | PTE_U
-    );
-
-    thread->pid = process->pid;
-    thread->state = READY;
-    thread->context.sepc = process->base_address;
-    thread->context.reg[2] = USER_STACK_TOP & ~0xFULL;
-    thread->context.sstatus = SSTATUS_SPIE;
-
-    return true;
 }
 
 // stack smash protector test function
@@ -64,7 +39,7 @@ static bool initialize_main_thread(process_t *process, thread_t *thread)
 //     }
 // }
 
-void kernel_main()
+static void main_hart_kernel(void)
 {
     // == Test: if stack smashing protector works ==
     // uart_putstr("Start SSP test..\n");
@@ -77,19 +52,15 @@ void kernel_main()
 
     int count = (int) sizeof(elf_headers)/sizeof(elf_headers[0]);
 
-    // initialize the process queue
-    init_thread_queue();
     int thread_count = 0;
+    queue_t *main_thread_queue = &find_hart(MAIN_HARTID)->thread_queue;
+    queue_t *secondary_thread_queue = &find_hart(1)->thread_queue;
 
-    uart_putstr("== Start loading ");
-    uart_putuint64(count);
-    uart_putstr(" program(s)==\n");
+    uart_putstr_direct("== Start loading ");
+    uart_putuint64_direct(count);
+    uart_putstr_direct(" program(s)==\n");
 
     for (int i = 0; i < count; i++) {
-        uart_putstr("\n");
-        uart_putstr("Program ");
-        uart_putuint64((uint64_t) i);
-        uart_putstr(":\n");
 
         // Get the process
         process_t *p = &process_table[i];
@@ -115,42 +86,54 @@ void kernel_main()
             thread_t *p_main_thread = &thread_table[thread_count];
 
             if (!initialize_main_thread(p, p_main_thread)) {
-                uart_putstr("Failed to create user thread\n");
+                uart_putstr_direct("Failed to create user thread\n");
                 // TODO: Mark the process as failed and clean            }
             } else{
                 // Assign an id to the thread and Put it in the queue
                 p_main_thread->tid = thread_count;
-                queue_enqueue(&thread_q, p_main_thread);
+                queue_t *thread_queue =
+                    i == UART_USER_PID ? secondary_thread_queue : main_thread_queue;
+                if (i == UART_USER_PID) {
+                    uart_thread_tid = p_main_thread->tid;
+                }
+                queue_enqueue(thread_queue, p_main_thread);
                 thread_count++;
-                uart_putstr("Enqueued thread ");
-                uart_putuint64((uint64_t) p_main_thread->tid);
-                uart_putstr(".\n");
             }
         }
     }
 
     // Set up the message queue
     initialize_message_queue(thread_count);
-
-    uart_putstr("== Finished loading ");
-    uart_putuint64(count);
-    uart_putstr(" program(s)==\n");
     
-    // print the queue
-    for (int i = 0; i < thread_q.count; i++) {
-        thread_t *thread = (thread_t *) thread_q.items[i];
-        uart_putstr("TID: ");
-        uart_putuint64(thread->tid);
-        uart_putstr("\n");
-    }
+    // release the secondary harts after finish setting up shared resources
+    release_hart(1);
 
-    // init the timer
+    // The main hart runs the user programs.
+    timer_init();
+    scheduler();
+}
+
+static void secondary_hart_kernel(uint64_t hart_id)
+{
+    queue_t *thread_queue = &find_hart(hart_id)->thread_queue;
+
+    uart_putstr_direct("Secondary hart is running in parallel.\n");
+
     timer_init();
 
-    // Execute the process queue
+    // user uart belongs to the 2nd hart so it's not ready till the 2nd hart init
+    uart_set_ready();
     scheduler();
-    
-    while (1)
-    {
+}
+
+void kernel_main(uint64_t hart_id)
+{
+    if (hart_id == MAIN_HARTID) {
+        main_hart_kernel();
+    } else {
+        secondary_hart_kernel(hart_id);
+    }
+
+    while (1) {
     }
 }

@@ -11,7 +11,6 @@ restore_context_asm:
     ld ra,  8(a0)
     ld sp, 16(a0)
     ld gp,  24(a0)
-    ld tp,  32(a0)
     ld t1,  48(a0)
     ld t2,  56(a0)
     ld s0,  64(a0)

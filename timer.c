@@ -1,7 +1,8 @@
 #include "csr.h"
 #include "timer.h"
+#include "hart.h"
 
-static uint64_t next_deadline;
+static uint64_t next_deadline[MAX_HART_NUM];
 
 uint64_t timer_now(void)
 {
@@ -12,14 +13,24 @@ uint64_t timer_now(void)
 
 void timer_init(void)
 {
-    next_deadline = timer_now() + TIMER_SLICE;
-    write_stimecmp(next_deadline);
+    uint64_t hart_id = current_hart()->hart_id;
+
+    next_deadline[hart_id] = timer_now() + TIMER_SLICE;
+    write_stimecmp(next_deadline[hart_id]);
     enable_timer_supervisor_interrupt();
-    enable_supervisor_interrupt();
 }
 
 void timer_rearm(void)
 {
-    next_deadline += TIMER_SLICE;
-    write_stimecmp(next_deadline);
+    uint64_t hart_id = current_hart()->hart_id;
+    uint64_t now = timer_now();
+    next_deadline[hart_id] += TIMER_SLICE;
+    
+    if (next_deadline[hart_id] <= now) {
+        next_deadline[hart_id] = now + TIMER_SLICE;
+    } else {
+        next_deadline[hart_id] += TIMER_SLICE;
+    }
+
+    write_stimecmp(next_deadline[hart_id]);
 }

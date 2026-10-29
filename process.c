@@ -4,6 +4,7 @@
 #include "uart.h"
 #include "memory_management.h"
 #include "context_switch.h"
+#include "hart.h"
 
 
 
@@ -38,39 +39,40 @@ process_t* find_process(int pid) {
 }
 
 void scheduler() {
-    while (!(queue_is_empty(&thread_q))) {
-        uart_putstr("The thread queue is not empty.\n");
-        thread_t* t = queue_peek(&thread_q);
+    hart_t *hart = current_hart();
+    queue_t *thread_queue = current_hart_thread_queue();
 
-        uart_putstr("Current program tid: ");
-        uart_putuint64(t->tid);
-        uart_putstr("\n");
+    if (hart == 0 || thread_queue == 0) {
+        uart_putstr("Scheduler could not find the current hart.\n");
+        return;
+    }
+
+    while (!(queue_is_empty(thread_queue))) {
+        thread_t* t = queue_peek(thread_queue);
         
         if (t->state == READY) {
-            uart_putstr("\n");
-            uart_putstr("=== Start executing thread ");
-            uart_putuint64(t->tid);
-            uart_putstr(" ===\n");
 
             // Update the satp to the thread process pt
             process_t* p = find_process(t->pid);
             switch_page_table(p->root_pt);
 
             t->state = RUNNING;
+            hart->current_thread = t;
             restore_context(t->tid);
         } else if (t->state == BLOCKED) {
             // pop the process and put it at end of line
-            queue_enqueue(&thread_q, queue_dequeue(&thread_q));
+            queue_enqueue(thread_queue, queue_dequeue(thread_queue));
         } else if (t->state == EXIT) {
-            queue_dequeue(&thread_q); // remove the exited thread
+            queue_dequeue(thread_queue); // remove the exited thread
         } else if (t->state == RUNNING) {
-            uart_putstr("Scheduler found a running process\n");
+            uart_putstr_direct("Scheduler found a running process\n");
             return;
         }
     }
 
-    if (queue_is_empty(&thread_q)) {
-        uart_putstr("No more active threads.\n");
+    if (queue_is_empty(thread_queue)) {
+        hart->current_thread = &NULL_THREAD;
+        uart_putstr_direct("No more active threads.\n");
         while (1) {
             __asm__ volatile("wfi");
         }

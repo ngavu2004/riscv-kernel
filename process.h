@@ -12,7 +12,7 @@ typedef enum {
     PROCESS_EXIT
 } process_state;
 
-typedef struct {
+typedef struct process {
     uint64_t pid;
     uint64_t base_address;
     process_state state;
