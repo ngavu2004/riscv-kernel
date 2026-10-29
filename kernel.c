@@ -8,6 +8,7 @@
 #include "thread.h"
 #include "timer.h"
 #include "hart.h"
+#include "uart.h"
 
 // declare prototype for uart_putstr function
 void uart_putstr(const char *);
@@ -55,15 +56,11 @@ static void main_hart_kernel(void)
     queue_t *main_thread_queue = &find_hart(MAIN_HARTID)->thread_queue;
     queue_t *secondary_thread_queue = &find_hart(1)->thread_queue;
 
-    uart_putstr("== Start loading ");
-    uart_putuint64(count);
-    uart_putstr(" program(s)==\n");
+    uart_putstr_direct("== Start loading ");
+    uart_putuint64_direct(count);
+    uart_putstr_direct(" program(s)==\n");
 
     for (int i = 0; i < count; i++) {
-        uart_putstr("\n");
-        uart_putstr("Program ");
-        uart_putuint64((uint64_t) i);
-        uart_putstr(":\n");
 
         // Get the process
         process_t *p = &process_table[i];
@@ -89,37 +86,25 @@ static void main_hart_kernel(void)
             thread_t *p_main_thread = &thread_table[thread_count];
 
             if (!initialize_main_thread(p, p_main_thread)) {
-                uart_putstr("Failed to create user thread\n");
+                uart_putstr_direct("Failed to create user thread\n");
                 // TODO: Mark the process as failed and clean            }
             } else{
                 // Assign an id to the thread and Put it in the queue
                 p_main_thread->tid = thread_count;
                 queue_t *thread_queue =
                     i == UART_USER_PID ? secondary_thread_queue : main_thread_queue;
+                if (i == UART_USER_PID) {
+                    uart_thread_tid = p_main_thread->tid;
+                }
                 queue_enqueue(thread_queue, p_main_thread);
                 thread_count++;
-                uart_putstr("Enqueued thread ");
-                uart_putuint64((uint64_t) p_main_thread->tid);
-                uart_putstr(".\n");
             }
         }
     }
 
     // Set up the message queue
     initialize_message_queue(thread_count);
-
-    uart_putstr("== Finished loading ");
-    uart_putuint64(count);
-    uart_putstr(" program(s)==\n");
     
-    // print the queue
-    for (int i = 0; i < main_thread_queue->count; i++) {
-        thread_t *thread = (thread_t *) main_thread_queue->items[i];
-        uart_putstr("TID: ");
-        uart_putuint64(thread->tid);
-        uart_putstr("\n");
-    }
-
     // release the secondary harts after finish setting up shared resources
     release_hart(1);
 
@@ -132,19 +117,17 @@ static void secondary_hart_kernel(uint64_t hart_id)
 {
     queue_t *thread_queue = &find_hart(hart_id)->thread_queue;
 
-    uart_putstr("Secondary hart is running in parallel.\n");
-    uart_putstr("The secondary hart queue contains ");
-    uart_putuint64((uint64_t)thread_queue->count);
-    uart_putstr(" thread(s).\n");
+    uart_putstr_direct("Secondary hart is running in parallel.\n");
 
     timer_init();
+
+    // user uart belongs to the 2nd hart so it's not ready till the 2nd hart init
+    uart_set_ready();
     scheduler();
 }
 
 void kernel_main(uint64_t hart_id)
 {
-    // set the global hart id
-    current_hart_id = hart_id;
     if (hart_id == MAIN_HARTID) {
         main_hart_kernel();
     } else {

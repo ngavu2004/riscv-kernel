@@ -39,7 +39,7 @@ process_t* find_process(int pid) {
 }
 
 void scheduler() {
-    hart_t *hart = find_hart(current_hart_id);
+    hart_t *hart = current_hart();
     queue_t *thread_queue = current_hart_thread_queue();
 
     if (hart == 0 || thread_queue == 0) {
@@ -48,18 +48,9 @@ void scheduler() {
     }
 
     while (!(queue_is_empty(thread_queue))) {
-        uart_putstr("The thread queue is not empty.\n");
         thread_t* t = queue_peek(thread_queue);
-
-        uart_putstr("Current program tid: ");
-        uart_putuint64(t->tid);
-        uart_putstr("\n");
         
         if (t->state == READY) {
-            uart_putstr("\n");
-            uart_putstr("=== Start executing thread ");
-            uart_putuint64(t->tid);
-            uart_putstr(" ===\n");
 
             // Update the satp to the thread process pt
             process_t* p = find_process(t->pid);
@@ -74,14 +65,14 @@ void scheduler() {
         } else if (t->state == EXIT) {
             queue_dequeue(thread_queue); // remove the exited thread
         } else if (t->state == RUNNING) {
-            uart_putstr("Scheduler found a running process\n");
+            uart_putstr_direct("Scheduler found a running process\n");
             return;
         }
     }
 
     if (queue_is_empty(thread_queue)) {
         hart->current_thread = &NULL_THREAD;
-        uart_putstr("No more active threads.\n");
+        uart_putstr_direct("No more active threads.\n");
         while (1) {
             __asm__ volatile("wfi");
         }

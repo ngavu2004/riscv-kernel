@@ -26,7 +26,7 @@ void uart_putuint64(uint64_t num) {
     }
 
     while (i > 0) {
-        uart_putchar(buffer[i--]);
+        uart_putchar(buffer[--i]);
     }
 
 }
@@ -54,6 +54,17 @@ static void syscall_receive(char *buffer) {
     );
 }
 
+static void syscall_toggle_timer_interrupt(void) {
+    register uint64_t syscall_register asm("a7") = 5;
+
+    asm volatile(
+        "ecall"
+        :
+        : "r"(syscall_register)
+        : "memory"
+    );
+}
+
 static void syscall_exit(void) {
     register uint64_t syscall_register asm("a7") = 10;
 
@@ -66,14 +77,17 @@ static void syscall_exit(void) {
 }
 
 void user_main() {
+    // disable timer interrupt
+    syscall_toggle_timer_interrupt();
+    
     char buffer[128];
 
-    syscall_receive(buffer);
-    uart_putstr("User UART received: ");
-    uart_putstr(buffer);
-    uart_putstr("\n");
-
-    syscall_exit();
+    while (1) {
+        syscall_receive(buffer);
+        uart_putstr("User UART received: ");
+        uart_putstr(buffer);
+        uart_putstr("\n");
+    }
 
     while (1) {
     }

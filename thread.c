@@ -38,6 +38,7 @@ bool initialize_main_thread(process_t *process, thread_t *thread)
     thread->context.sepc = process->base_address;
     thread->context.reg[2] = USER_STACK_TOP & ~0xFULL;
     thread->context.sstatus = SSTATUS_SPIE;
+    thread->timer_preemptible = true;
 
     return true;
 }

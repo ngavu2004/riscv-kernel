@@ -47,6 +47,8 @@ void hart_boot(void) {
         }
     }
 
+    __asm__ volatile("mv tp, %0" : : "r"(hart) : "tp");
+
     // register kernel entry and trap vectors for M-mode and S-mode
     write_mtvec((uint64_t)&mtrap_handler);
     write_stvec((uint64_t)&trap_vector);

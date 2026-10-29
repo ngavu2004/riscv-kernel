@@ -13,7 +13,7 @@ uint64_t timer_now(void)
 
 void timer_init(void)
 {
-    uint64_t hart_id = current_hart_id;
+    uint64_t hart_id = current_hart()->hart_id;
 
     next_deadline[hart_id] = timer_now() + TIMER_SLICE;
     write_stimecmp(next_deadline[hart_id]);
@@ -22,7 +22,7 @@ void timer_init(void)
 
 void timer_rearm(void)
 {
-    uint64_t hart_id = current_hart_id;
+    uint64_t hart_id = current_hart()->hart_id;
     uint64_t now = timer_now();
     next_deadline[hart_id] += TIMER_SLICE;
     

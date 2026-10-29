@@ -1,5 +1,4 @@
 #include "message.h"
-#include "uart.h"
 #include "process.h"
 #include "thread.h"
 #include <stddef.h>
@@ -45,16 +44,12 @@ bool send(char* text, int source_tid, int dest_tid) {
         return false;
     };
     
-    uart_putstr("Start initialize the new message");
-
     // Initialize the new message
     int position = destination->message_count;
     message_t *new_message = destination->queue[position];
 
     new_message->source_tid = source_tid;
     new_message->dest_tid = dest_tid;
-
-    uart_putstr("Start copying message to kernel memory. \n");
 
     size_t i = 0;
     for (; i < MESSAGE_SIZE - 1 && text[i] != '\0'; i++) {
@@ -63,8 +58,6 @@ bool send(char* text, int source_tid, int dest_tid) {
     }
     new_message->message[i] = '\0';
     destination->message_count++;
-    uart_putstr("Done sending message.\n");
-
     // Wake up the dest_tid to handle the message
     unblock_thread((uint64_t)dest_tid);
 
@@ -73,18 +66,18 @@ bool send(char* text, int source_tid, int dest_tid) {
 
 void receive(int curr_tid, char *buffer) {
     message_queue_t* q = &mq[curr_tid];
-    uart_putstr("Current number of message: ");
-    uart_putuint64(q->message_count);
-    uart_putline("");
+    // uart_putstr("Current number of message: ");
+    // uart_putuint64(q->message_count);
+    // uart_putline("");
     
     while (q->message_count > 0) {
         int curr_pos = q->message_count - 1;
         message_t* receive_m = q->queue[curr_pos];
-        uart_putstr("Sender message: ");
-        uart_putstr(receive_m->message);
-        uart_putstr(" ; From: process ");
-        uart_putuint64(receive_m->source_tid + 1);
-        uart_putstr("\n");
+        // uart_putstr("Sender message: ");
+        // uart_putstr(receive_m->message);
+        // uart_putstr(" ; From: process ");
+        // uart_putuint64(receive_m->source_tid + 1);
+        // uart_putstr("\n");
 
         // Copy the message to the buffer
         for(int i=0; i< MESSAGE_SIZE; i++) {
@@ -95,10 +88,6 @@ void receive(int curr_tid, char *buffer) {
 
             buffer[i] = receive_m->message[i];
         }
-
-        // Print the message in the receiver buffer
-        uart_putstr("Receiver message: ");
-        uart_putstr(buffer);
 
         // Make the receiver ready
         unblock_thread((uint64_t)receive_m->source_tid);

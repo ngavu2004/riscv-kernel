@@ -58,9 +58,7 @@ void map_page(
     int pages,
     uint64_t flags
 ) {
-
-
-
+    
     for (int i=0; i < pages; i++) {
         uint64_t pt_indexes[3];
         get_indexes(va, (uint64_t *) pt_indexes);
@@ -82,7 +80,7 @@ void map_page(
                 pagetable_t *next_pt = allocate_page();
 
                 if (next_pt == NULL) {
-                    uart_putstr("Out of page-table memory\n");
+                    uart_putstr_direct("Out of page-table memory\n");
                     while (1) {
                     }
                 }
@@ -148,6 +146,7 @@ void map_user_uart(pagetable_t *pt)
         1,
         PTE_V | PTE_R | PTE_W | PTE_U
     );
+
 }
 
 uintptr_t create_kernel_pagetable(void) {

@@ -18,10 +18,10 @@ typedef struct {
 
 extern hart_t hart_table[MAX_HART_NUM];
 extern volatile bool hart_release_table[MAX_HART_NUM];
-extern uint64_t current_hart_id;
 
 void init_hart_table(void);
 hart_t *find_hart(uint64_t hart_id);
+hart_t *current_hart(void);
 void wait_for_hart(uint64_t hart_id);
 void release_hart(uint64_t hart_id);
 queue_t *current_hart_thread_queue(void);

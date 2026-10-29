@@ -28,15 +28,7 @@ void trap_handler(thread_context_t *frame) {
     uint64_t user_sp = frame->reg[2];  // sp is x2
     uint64_t user_ra = frame->reg[1];  // ra is x1
     
-    uart_putstr("User a0: ");
-    uart_puthex(user_a0);
-    uart_putstr("\n");
-
     uint64_t cause = read_scause();
-
-    uart_putstr("Scause value:");
-    uart_puthex(cause);
-    uart_putstr("\n");
 
     if (cause >> 63) {
         uint64_t code = cause & 0x7FFFFFFFFFFFFFFFULL;
@@ -47,9 +39,14 @@ void trap_handler(thread_context_t *frame) {
             thread_t *current = queue_dequeue(thread_queue);
 
             if (current != NULL) {
-                save_context(current->tid, frame);
-                current->state = READY;
-                queue_enqueue(thread_queue, current);
+                if (!current->timer_preemptible) {
+                    return;
+                } else {
+                    save_context(current->tid, frame);
+                    current->state = READY;
+                    queue_enqueue(thread_queue, current);
+                }
+                
             }
 
             timer_rearm();
@@ -58,19 +55,19 @@ void trap_handler(thread_context_t *frame) {
         }
     } else {
         if (cause == 1) {
-            uart_putstr("Instruction access fault\n");
+            uart_putstr_direct("Instruction access fault\n");
             return;
         }
 
         if (cause == 2) {
-            uart_putstr("Illegal instruction");
+            uart_putstr_direct("Illegal instruction");
             return;
         }
 
         if (cause == 7) {
-            uart_putstr("Store access fault at: ");
-            uart_puthex(read_mtval());
-            uart_putstr("\n");
+            uart_putstr_direct("Store access fault at: ");
+            uart_puthex_direct(read_mtval());
+            uart_putstr_direct("\n");
 
             while (1) {
                 __asm__ volatile("wfi");
@@ -83,10 +80,8 @@ void trap_handler(thread_context_t *frame) {
             thread_t *current_thread = queue_peek(thread_queue);
             int curr_tid = current_thread == NULL ? -1 : (int)current_thread->tid;
             switch (frame->reg[17]) {
-                case 1: // Print syscall
-                    uart_putstr("Print syscall called.\n");
-                    uart_putuint64(frame->reg[10]);
-                    uart_putstr("\n");
+                case 1: // Print syscall, basically send message to UART process
+                    send((char *)frame->reg[10], curr_tid, uart_thread_tid);
                     break;
                 case 2: // Send
                     const char *message = (const char *)frame->reg[10];
@@ -97,22 +92,13 @@ void trap_handler(thread_context_t *frame) {
 
 
                     send((char *)frame->reg[10], curr_tid, (int)frame->reg[11]);
-
-                    save_context((uint64_t)curr_tid, frame);
-                    block_thread((uint64_t)curr_tid); // block the thread after send, until the endpoint receive the message
-                    scheduler();
                     break;
                 case 3: // Receive message
-                    uart_putstr("Start receiving message: ");
                     char *user_buffer = (char *)(uintptr_t)user_a0;
-
                     if (user_buffer == NULL) {
-                        uart_putstr("Invalid receive buffer\n");
                         break;
                     }
-
                     receive(curr_tid, user_buffer);
-
                     break;
                 case 4: // Yield syscall
                     thread_t *current = queue_dequeue(thread_queue);
@@ -125,7 +111,9 @@ void trap_handler(thread_context_t *frame) {
 
                     scheduler();
                     return;
-
+                case 5: // toggle timer interrupt for a thread
+                    current_thread->timer_preemptible = !current_thread->timer_preemptible;
+                    break;
                 case 10: // Exit
                     uart_putstr("Thread exited.\n");
                     thread_t *thread = find_thread((uint64_t)curr_tid);
@@ -137,9 +125,9 @@ void trap_handler(thread_context_t *frame) {
         }
 
         if (cause == 15) {
-            uart_putstr("Store page fault at: ");
-            uart_puthex(read_stval());
-            uart_putstr("\n");
+            uart_putstr_direct("Store page fault at: ");
+            uart_puthex_direct(read_stval());
+            uart_putstr_direct("\n");
 
             while (1) {
                 __asm__ volatile("wfi");

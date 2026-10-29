@@ -3,7 +3,6 @@
 
 hart_t hart_table[MAX_HART_NUM];
 volatile bool hart_release_table[MAX_HART_NUM];
-uint64_t current_hart_id;
 static void *hart_thread_queue_storage[MAX_HART_NUM][MAX_THREAD_NUM];
 
 void init_hart_table(void)
@@ -31,6 +30,15 @@ hart_t *find_hart(uint64_t hart_id)
     return &hart_table[hart_id];
 }
 
+hart_t *current_hart(void)
+{
+    hart_t *hart;
+
+    __asm__ volatile("mv %0, tp" : "=r"(hart));
+
+    return hart;
+}
+
 void wait_for_hart(uint64_t hart_id)
 {
     if (hart_id >= MAX_HART_NUM) {
@@ -54,7 +62,7 @@ void release_hart(uint64_t hart_id)
 
 queue_t *current_hart_thread_queue(void)
 {
-    hart_t *hart = find_hart(current_hart_id);
+    hart_t *hart = current_hart();
 
     return hart == 0 ? 0 : &hart->thread_queue;
 }
