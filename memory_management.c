@@ -1,5 +1,7 @@
 #include "memory_management.h"
 uintptr_t kernel_root_pt;
+uint8_t page_bitmap[BITMAP_SIZE];
+static spin_lock_t page_allocator_lock;
 
 static void zero_page(void *page)
 {
@@ -12,6 +14,8 @@ static void zero_page(void *page)
 
 void *allocate_page(void)
 {
+    spin_lock_acquire(&page_allocator_lock);
+
     for (int i = 0; i < BITMAP_SIZE; i++) {
         if (page_bitmap[i] != UINT8_MAX) { // if that byte is not full
             for (int j = 0; j < 8; j++) {
@@ -23,21 +27,27 @@ void *allocate_page(void)
                     void *page = (void *)page_address;
                     page_bitmap[i] |= (uint8_t)(1u << j);
                     zero_page(page);
+                    spin_lock_release(&page_allocator_lock);
                     return page;
                 }
             }
         }
     }
 
+    spin_lock_release(&page_allocator_lock);
     return NULL;
 }
 
 void free_page(void * page_start) {
+    spin_lock_acquire(&page_allocator_lock);
+
     uint64_t page_index = ((uint64_t) page_start - PAGE_ALLOC_START) / PAGE_SIZE;
     uint64_t byte_index = page_index / 8;
     uint8_t bit_index = page_index % 8;
 
-    page_bitmap[byte_index] ^= 1u << bit_index; // set the bit back to 0 with xor
+    page_bitmap[byte_index] &= (uint8_t)~(1u << bit_index);
+
+    spin_lock_release(&page_allocator_lock);
 }
 
 void *memcpy(void *destination, const void *source, size_t size) {

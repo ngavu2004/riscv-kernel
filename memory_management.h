@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "uart.h"
+#include "spin_lock.h"
 
 #define PTE_V  (1ULL << 0)
 #define PTE_R  (1ULL << 1)
@@ -18,7 +19,7 @@
 #define PAGE_COUNT ((PAGE_ALLOC_END - PAGE_ALLOC_START) / PAGE_SIZE)
 #define BITMAP_SIZE ((PAGE_COUNT + 7) / 8) // make sure the bit is rounded up
 
-static uint8_t page_bitmap[BITMAP_SIZE]; // 0 = free; 1 = allocated
+extern uint8_t page_bitmap[]; // 0 = free; 1 = allocated
 
 extern char __boot_text_start[], __boot_text_end[];
 extern char __text_start[], __text_end[];
