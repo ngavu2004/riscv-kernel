@@ -1,4 +1,5 @@
 #include "memory_management.h"
+
 uintptr_t kernel_root_pt;
 uint8_t page_bitmap[BITMAP_SIZE];
 static spin_lock_t page_allocator_lock;
@@ -193,6 +194,27 @@ uintptr_t lookup_physical_page(pagetable_t *root, uintptr_t va) {
 
         pt = (pagetable_t *)pte_to_address(pte);
     }
+
+    return 0;
+}
+
+int map_monitor_page(process_t *target, process_t *monitor, uintptr_t target_va){
+    uintptr_t pa = lookup_physical_page(
+        (pagetable_t *)target->root_pt,
+        target_va
+    );
+
+    if (pa == 0)
+        return -1;
+
+    // Read-only user-space mapping
+    map_page(
+        (pagetable_t *)monitor->root_pt,
+        MONITOR_VA,
+        pa,
+        1,
+        PTE_V | PTE_U | PTE_R
+    );
 
     return 0;
 }
