@@ -1,0 +1,19 @@
+.section .text
+.global _start
+
+_start:
+    la sp, user_stack_top
+    call observed_program_main
+
+    li a7, 10
+    ecall
+
+1:
+    j 1b
+
+.section .bss
+.align 4
+
+user_stack:
+    .space 4096
+user_stack_top:

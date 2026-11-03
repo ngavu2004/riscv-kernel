@@ -81,7 +81,7 @@ void trap_handler(thread_context_t *frame) {
             int curr_tid = current_thread == NULL ? -1 : (int)current_thread->tid;
             switch (frame->reg[17]) {
                 case 1: // Print syscall, basically send message to UART process
-                    send((char *)frame->reg[10], curr_tid, uart_thread_tid);
+                    uart_putstr((char *)frame->reg[10]);
                     break;
                 case 2: // Send
                     const char *message = (const char *)frame->reg[10];
