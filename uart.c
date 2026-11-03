@@ -2,8 +2,21 @@
 #include "message.h"
 #include "uart.h"
 
+extern unsigned char _binary_uart_user_elf_start[]
+    __attribute__((weak));
+extern unsigned char _binary_uart_user_elf_end[]
+    __attribute__((weak));
+
 uint64_t uart_thread_tid;
-static bool uart_user_ready;
+bool uart_user_ready = false;
+
+bool uart_defined(void)
+{
+    uintptr_t start = (uintptr_t)_binary_uart_user_elf_start;
+    uintptr_t end = (uintptr_t)_binary_uart_user_elf_end;
+
+    return start != 0 && end > start;
+}
 
 static void uart_putchar_direct(char c) {
     *(volatile unsigned char*)(UART0) = c;
@@ -62,7 +75,7 @@ void uart_puthex_direct(uint64_t value)
 
 void uart_putstr(const char *s)
 {
-    if (!uart_user_ready) {
+    if (!uart_user_ready || !uart_defined()) {
         uart_putstr_direct(s);
         return;
     }
@@ -72,7 +85,7 @@ void uart_putstr(const char *s)
 
 void uart_putline(const char *s)
 {
-    if (!uart_user_ready) {
+    if (!uart_user_ready || !uart_defined()) {
         uart_putline_direct(s);
         return;
     }
@@ -107,7 +120,7 @@ void uart_putuint64(uint64_t num)
 
 void uart_puthex(uint64_t value)
 {
-    if (!uart_user_ready) {
+    if (!uart_user_ready || !uart_defined()) {
         uart_puthex_direct(value);
         return;
     }
