@@ -6,9 +6,6 @@
 #include "my_lib/queue.h"
 #include "thread.h"
 
-#define MAX_HART_NUM 2
-#define MAIN_HARTID 0
-
 typedef struct {
     uint64_t hart_id;
     uintptr_t stack_pointer;

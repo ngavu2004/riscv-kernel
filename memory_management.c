@@ -88,7 +88,9 @@ void map_page(
 
             // If not leaf and not valid, allocated new pt
             if (!is_valid(entry)) {
+                uart_put_debug("Not leaf and not valid, allocating new page table...");
                 pagetable_t *next_pt = allocate_page();
+                uart_put_debug("Done");
 
                 if (next_pt == NULL) {
                     uart_putstr_direct("Out of page-table memory\n");
@@ -122,8 +124,8 @@ void map_kernel_address(pagetable_t* pt) {
     // Map uart
     map_page(
         pt,
-        0x10000000,
-        0x10000000,
+        UART0,
+        UART0,
         0x100,
         PTE_V | PTE_R | PTE_W
     );
@@ -161,8 +163,12 @@ void map_user_uart(pagetable_t *pt)
 }
 
 uintptr_t create_kernel_pagetable(void) {
+    
+    uart_put_debug("Start allocate root page table");
     pagetable_t *root_page_table = allocate_page();
+    uart_put_debug("Done allocate root page table");
 
+    uart_put_debug("\n\rStart map kernel address");
     map_kernel_address(root_page_table);
 
     return (uintptr_t)root_page_table;

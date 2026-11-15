@@ -3,9 +3,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-// QEMU emulator defines UART at 0x10000000L
-#define UART0 0x10000000L
-#define UART0_SIZE 0x100
 
 extern uint64_t uart_thread_tid;
 extern bool uart_user_ready;
@@ -18,6 +15,7 @@ void uart_putuint64_direct(uint64_t num);
 void uart_puthex_direct(uint64_t value);
 
 void uart_putstr(const char *s);
+void uart_put_debug(const char *s);
 void uart_putline(const char *s);
 void uart_putuint64(uint64_t num);
 void uart_puthex(uint64_t value);

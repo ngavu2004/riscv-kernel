@@ -2,9 +2,11 @@ ENTRY(_entry)
 
 PAGE_SIZE = 4096;
 
+KERNEL_BASE = DEFINED(KERNEL_BASE) ? KERNEL_BASE : 0x80000000;
+
 SECTIONS
 {
-    . = 0x80000000;
+    . = KERNEL_BASE;
     __kernel_start = .;
 
     /* Boot code: R+X */

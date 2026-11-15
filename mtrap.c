@@ -3,6 +3,7 @@
 
 __asm__(".p2align 2"); // Aligns to 2^2 = 4 bytes
 void mtrap_handler(void) {
+    uart_put_debug("yo trap");
     mcause_value_t cause = read_mcause();
 
     uart_putstr_direct("Mcause interrupt bit: ");

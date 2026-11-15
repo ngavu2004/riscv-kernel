@@ -38,6 +38,7 @@ void uart_putline_direct(const char *s)
 {
     uart_putstr_direct(s);
     uart_putchar_direct('\n');
+    uart_putchar_direct('\r');
 }
 
 void uart_putuint64_direct(uint64_t num)
@@ -57,6 +58,13 @@ void uart_putuint64_direct(uint64_t num)
 
     while (i > 0) {
         uart_putchar_direct(buffer[--i]);
+    }
+}
+
+void uart_put_debug(const char* s) {
+    if (DEBUG == 1) {
+        uart_putstr_direct("DEBUG: ");
+        uart_putline_direct(s);
     }
 }
 

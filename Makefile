@@ -13,8 +13,42 @@ KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
 USER_OBJS := user1elf.o user2elf.o uart_userelf.o
 EXPERIMENT_OBJS := observed_programelf.o monitorelf.o
 
-KERNEL_CFLAGS = -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany
-USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany
+DEBUG ?= 0
+PLATFORM ?= qemu
+$(info Platform: $(PLATFORM))
+ifeq ($(PLATFORM),qemu)
+    KERNEL_BASE := 0x80000000
+    UART_START := 0x10000000
+    UART_SIZE := 0x100
+	USER_BASE_ADDRESS := 0x80400000
+	PAGE_ALLOC_START := 0x80400000
+	PAGE_ALLOC_END := 0x80800000
+	MAX_HART_NUM := 2
+else ifeq ($(PLATFORM),fpga)
+    KERNEL_BASE := 0x40000000
+    UART_START := 0x000C0000
+    UART_SIZE := 0x1000
+	USER_BASE_ADDRESS := 0x40400000
+	PAGE_ALLOC_START := 0x40400000
+	PAGE_ALLOC_END := 0x40800000
+	MAX_HART_NUM := 1
+else
+    $(error Unsupported platform)
+endif
+
+PLATFORM_CFLAGS := -DUART0=$(UART_START) -DUART0_SIZE=$(UART_SIZE) -DMAX_HART_NUM=$(MAX_HART_NUM) \
+	-DUSER_BASE_ADDRESS=$(USER_BASE_ADDRESS) -DMAIN_HARTID=0 -DDEBUG=$(DEBUG) \
+	-DPAGE_ALLOC_START=$(PAGE_ALLOC_START) -DPAGE_ALLOC_END=$(PAGE_ALLOC_END) \
+	-DKERNEL_BASE=$(KERNEL_BASE)
+ARCH_CFLAGS :=
+
+ifeq ($(PLATFORM),fpga)
+    ARCH_CFLAGS := -march=rv64ima_zicsr -mabi=lp64
+endif
+
+LDFLAGS = -T kernel.ld -Wl,--defsym=KERNEL_BASE=$(KERNEL_BASE)
+KERNEL_CFLAGS = $(ARCH_CFLAGS) -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany $(PLATFORM_CFLAGS)
+USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany $(PLATFORM_CFLAGS)
 
 all: kernel.elf
 
@@ -50,10 +84,10 @@ monitorelf.o: monitor.elf
 	$(LD) -r -b binary $< -o $@
 
 kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(USER_OBJS) $(EXPERIMENT_OBJS)
-	$(CC) $(KERNEL_CFLAGS) -T kernel.ld  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(EXPERIMENT_OBJS) -o $@
+	$(CC) $(KERNEL_CFLAGS) $(LDFLAGS)  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(EXPERIMENT_OBJS) -o $@
 
 run: kernel.elf
-	qemu-system-riscv64 -machine virt -smp 2 -bios none -kernel $< -nographic
+	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic
 
 debug: kernel.elf
 	qemu-system-riscv64 -machine virt -smp 2 -bios none -kernel $< -nographic -S -s

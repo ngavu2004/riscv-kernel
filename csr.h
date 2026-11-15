@@ -7,7 +7,6 @@
 #define SIE_BIT_POS 1
 #define STIE_BIT_POS 5
 #define STCE_BIT_POS 63
-#define USER_BASE_ADDRESS 0x80400000
 #define USER_SIZE 4096 // 4 KiB
 
 typedef struct {

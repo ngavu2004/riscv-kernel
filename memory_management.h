@@ -15,8 +15,6 @@
 
 #define PAGE_SIZE 4096
 #define ENTRY_NUM 512
-#define PAGE_ALLOC_START 0x80400000
-#define PAGE_ALLOC_END   0x80800000
 #define PAGE_COUNT ((PAGE_ALLOC_END - PAGE_ALLOC_START) / PAGE_SIZE)
 #define BITMAP_SIZE ((PAGE_COUNT + 7) / 8) // make sure the bit is rounded up
 

@@ -67,6 +67,7 @@ static void main_hart_kernel(void)
     // 1. Load the programs
     // Note: Ideally I would want memcmp here but since this is bare metal and I cant use any C libary, we will make do with this for now
     // UPDATE here depends on the program you want to run
+    uart_put_debug("=== Start main_hart kernel ====");
     elf_program_t programs[] = {
         {_binary_observed_program_elf_start, MAIN_HARTID},
         {_binary_monitor_elf_start, 1}
@@ -74,8 +75,10 @@ static void main_hart_kernel(void)
 
     special_program_t special_program_pointer = {0, 0};
 
+    uart_put_debug("Mark 1");
     int count = sizeof(programs) / sizeof(programs[0]);
 
+    uart_put_debug("Mark 2");
     int thread_count = 0;
     queue_t *main_thread_queue = &find_hart(MAIN_HARTID)->thread_queue;
     queue_t *secondary_thread_queue = &find_hart(1)->thread_queue;
@@ -178,6 +181,10 @@ static void secondary_hart_kernel(uint64_t hart_id)
 
 void kernel_main(uint64_t hart_id)
 {
+    uart_putstr_direct("Hart id: ");
+    uart_putuint64(hart_id);
+    uart_putline("");
+    
     if (hart_id == MAIN_HARTID) {
         main_hart_kernel();
     } else {
