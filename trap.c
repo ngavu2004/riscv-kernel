@@ -60,13 +60,17 @@ void trap_handler(thread_context_t *frame) {
         }
 
         if (cause == 2) {
-            uart_putstr_direct("Illegal instruction");
+            uart_putstr_direct("Illegal instruction at PC: ");
+            uart_puthex_direct(frame->sepc);
+            uart_putstr_direct(", stval: ");
+            uart_puthex_direct(read_stval());
+            uart_putstr_direct("\n");
             return;
         }
 
         if (cause == 7) {
             uart_putstr_direct("Store access fault at: ");
-            uart_puthex_direct(read_mtval());
+            uart_puthex_direct(read_stval());
             uart_putstr_direct("\n");
 
             while (1) {
@@ -81,7 +85,7 @@ void trap_handler(thread_context_t *frame) {
             int curr_tid = current_thread == NULL ? -1 : (int)current_thread->tid;
             switch (frame->reg[17]) {
                 case 1: // Print syscall, basically send message to UART process
-                    uart_putstr((char *)frame->reg[10]);
+                    uart_putline((char *)frame->reg[10]);
                     break;
                 case 2: // Send
                     const char *message = (const char *)frame->reg[10];
@@ -125,9 +129,13 @@ void trap_handler(thread_context_t *frame) {
         }
 
         if (cause == 15) {
-            uart_putstr_direct("Store page fault at: ");
+            uart_putstr_direct("Store page fault: sepc=");
+            uart_puthex_direct(frame->sepc);
+            uart_putstr_direct(", stval=");
             uart_puthex_direct(read_stval());
-            uart_putstr_direct("\n");
+            uart_putstr_direct(", sp=");
+            uart_puthex_direct(frame->reg[2]);
+            uart_putstr_direct("\r\n");
 
             while (1) {
                 __asm__ volatile("wfi");

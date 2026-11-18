@@ -81,7 +81,7 @@ void print_elf_header(ElfHeader *elf)
 int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry, uintptr_t process_pt)
 {
     if (elf->e_ident[0] == 0x7f && elf->e_ident[1] == 'E' && elf->e_ident[2] == 'L' && elf->e_ident[3] == 'F') {
-        uart_putstr("Valid ELF file!\n");
+        uart_putstr("Valid ELF file!\r\n");
 
         for (int i = 0; i < elf->e_phnum; i++)
         {
@@ -95,7 +95,7 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry, 
 
                 uart_putstr("Load segment: ");
                 uart_puthex(curr_p->p_vaddr);
-                uart_putstr("\n");
+                uart_putstr("\r\n");
 
                 // Get the number of page needed to allocate for this process
                 uint64_t page_count = curr_p->p_memsz / PAGE_SIZE + (curr_p->p_memsz % PAGE_SIZE != 0);
@@ -164,7 +164,7 @@ int load_elf_header(ElfHeader *elf, const unsigned char * elf_start, int entry, 
             };
         }
 
-        uart_putstr("Finished copy the load segments\n");
+        uart_putstr("Finished copy the load segments\r\n");
         return 0;
     }
 

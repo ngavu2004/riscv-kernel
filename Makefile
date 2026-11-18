@@ -13,8 +13,10 @@ KERNEL_ASM := boot.S kernel_entry.S trap.S restore_context_asm.S
 USER_OBJS := user1elf.o user2elf.o uart_userelf.o
 EXPERIMENT_OBJS := observed_programelf.o monitorelf.o
 
+USER_UART ?= 0 # if i want the uart program to be in the user space
 DEBUG ?= 0
 PLATFORM ?= qemu
+PLATFORM_CFLAGS :=
 $(info Platform: $(PLATFORM))
 ifeq ($(PLATFORM),qemu)
     KERNEL_BASE := 0x80000000
@@ -24,6 +26,7 @@ ifeq ($(PLATFORM),qemu)
 	PAGE_ALLOC_START := 0x80400000
 	PAGE_ALLOC_END := 0x80800000
 	MAX_HART_NUM := 2
+	PLATFORM_CFLAGS += -DPLATFORM_QEMU
 else ifeq ($(PLATFORM),fpga)
     KERNEL_BASE := 0x40000000
     UART_START := 0x000C0000
@@ -32,14 +35,15 @@ else ifeq ($(PLATFORM),fpga)
 	PAGE_ALLOC_START := 0x40400000
 	PAGE_ALLOC_END := 0x40800000
 	MAX_HART_NUM := 1
+	PLATFORM_CFLAGS += -DPLATFORM_FPGA
 else
     $(error Unsupported platform)
 endif
 
-PLATFORM_CFLAGS := -DUART0=$(UART_START) -DUART0_SIZE=$(UART_SIZE) -DMAX_HART_NUM=$(MAX_HART_NUM) \
+PLATFORM_CFLAGS += -DUART0=$(UART_START) -DUART0_SIZE=$(UART_SIZE) -DMAX_HART_NUM=$(MAX_HART_NUM) \
 	-DUSER_BASE_ADDRESS=$(USER_BASE_ADDRESS) -DMAIN_HARTID=0 -DDEBUG=$(DEBUG) \
 	-DPAGE_ALLOC_START=$(PAGE_ALLOC_START) -DPAGE_ALLOC_END=$(PAGE_ALLOC_END) \
-	-DKERNEL_BASE=$(KERNEL_BASE)
+	-DKERNEL_BASE=$(KERNEL_BASE) -DUSER_UART=$(USER_UART)
 ARCH_CFLAGS :=
 
 ifeq ($(PLATFORM),fpga)
@@ -48,7 +52,17 @@ endif
 
 LDFLAGS = -T kernel.ld -Wl,--defsym=KERNEL_BASE=$(KERNEL_BASE)
 KERNEL_CFLAGS = $(ARCH_CFLAGS) -g -nostdlib -ffreestanding -fstack-protector-strong -mcmodel=medany $(PLATFORM_CFLAGS)
-USER_CFLAGS = -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany $(PLATFORM_CFLAGS)
+USER_CFLAGS = $(ARCH_CFLAGS) -g -nostdlib -ffreestanding -fno-stack-protector -mcmodel=medany $(PLATFORM_CFLAGS)
+
+PROGRAMS ?= user1
+
+# The hart I want for each program (if not they are default to be MAIN_HARTID)
+PROGRAM_HART_user1 := MAIN_HARTID
+PROGRAM_HART_observed_program := MAIN_HARTID
+PROGRAM_HART_monitor := 1
+
+PROGRAM_OBJS := $(addsuffix elf.o,$(PROGRAMS))
+PROGRAM_ENTRIES := $(foreach p,$(PROGRAMS),{ _binary_$(subst .,_,$(p))_elf_start, $(PROGRAM_HART_$(p)) },)
 
 all: kernel.elf
 
@@ -83,8 +97,18 @@ observed_programelf.o: observed_program.elf
 monitorelf.o: monitor.elf
 	$(LD) -r -b binary $< -o $@
 
-kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(USER_OBJS) $(EXPERIMENT_OBJS)
-	$(CC) $(KERNEL_CFLAGS) $(LDFLAGS)  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(EXPERIMENT_OBJS) -o $@
+.PHONY: FORCE
+FORCE:
+
+user_programs.generated.h: FORCE
+	@{ \
+		printf '%s\n' '#ifndef USER_PROGRAMS_GENERATED_H' '#define USER_PROGRAMS_GENERATED_H'; \
+		$(foreach p,$(PROGRAMS),printf '%s\n' 'extern unsigned char _binary_$(subst .,_,$(p))_elf_start[] __attribute__((weak));';) \
+		printf '%s\n' '#define USER_PROGRAM_TABLE { $(PROGRAM_ENTRIES) }' '#endif'; \
+	} > $@
+
+kernel.elf: $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(LIB_H) $(KERNEL_H) kernel.ld $(USER_OBJS) $(EXPERIMENT_OBJS) $(PROGRAM_OBJS) user_programs.generated.h
+	$(CC) $(KERNEL_CFLAGS) $(LDFLAGS)  $(KERNEL_ASM) $(KERNEL_C) $(LIB_C) $(EXPERIMENT_OBJS) $(PROGRAM_OBJS) -o $@
 
 run: kernel.elf
 	qemu-system-riscv64 -machine virt -bios none -kernel $< -nographic

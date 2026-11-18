@@ -37,8 +37,7 @@ void uart_putstr_direct(const char *s)
 void uart_putline_direct(const char *s)
 {
     uart_putstr_direct(s);
-    uart_putchar_direct('\n');
-    uart_putchar_direct('\r');
+    uart_putstr_direct('\r\n');
 }
 
 void uart_putuint64_direct(uint64_t num)

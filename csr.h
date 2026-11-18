@@ -6,6 +6,7 @@
 #define SPP_BIT_POS 8
 #define SIE_BIT_POS 1
 #define STIE_BIT_POS 5
+#define MTIE_BIT_POS 7
 #define STCE_BIT_POS 63
 #define USER_SIZE 4096 // 4 KiB
 
@@ -66,6 +67,10 @@ static inline void set_stce(uint64_t value) {
 
 static inline void enable_timer_supervisor_interrupt(void) {
     __asm__ volatile("csrs sie, %0" : : "r"(1ULL << STIE_BIT_POS));
+}
+
+static inline void enable_timer_machine_interrupt(void) {
+    __asm__ volatile("csrs mie, %0" : : "r"(1ULL << MTIE_BIT_POS));
 }
 
 static inline void enable_supervisor_interrupt(void) {

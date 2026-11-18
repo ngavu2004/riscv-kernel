@@ -39,6 +39,7 @@ process_t* find_process(int pid) {
 }
 
 void scheduler() {
+    uart_putline("Starting scheduler...");
     hart_t *hart = current_hart();
     queue_t *thread_queue = current_hart_thread_queue();
 

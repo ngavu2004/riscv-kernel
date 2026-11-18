@@ -26,6 +26,7 @@ extern unsigned char _binary_monitor_elf_end[] __attribute__((weak));
 extern unsigned char _binary_observed_program_elf_start[] __attribute__((weak));
 extern unsigned char _binary_observed_program_elf_end[] __attribute__((weak));
 
+#include "user_programs.generated.h"
 
 #define UART_USER_PID 2
 
@@ -67,11 +68,8 @@ static void main_hart_kernel(void)
     // 1. Load the programs
     // Note: Ideally I would want memcmp here but since this is bare metal and I cant use any C libary, we will make do with this for now
     // UPDATE here depends on the program you want to run
-    uart_put_debug("=== Start main_hart kernel ====");
-    elf_program_t programs[] = {
-        {_binary_observed_program_elf_start, MAIN_HARTID},
-        {_binary_monitor_elf_start, 1}
-    };
+    uart_putline_direct("=== Start main_hart kernel ====");
+    elf_program_t programs[] = USER_PROGRAM_TABLE;
 
     special_program_t special_program_pointer = {0, 0};
 
@@ -85,7 +83,7 @@ static void main_hart_kernel(void)
 
     uart_putstr_direct("== Start loading ");
     uart_putuint64_direct(count);
-    uart_putstr_direct(" program(s)==\n");
+    uart_putstr_direct(" program(s)==\r\n");
 
     for (int i = 0; i < count; i++) {
         elf_program_t *program = &programs[i];
@@ -104,9 +102,9 @@ static void main_hart_kernel(void)
         map_kernel_address((pagetable_t *)p->root_pt);
 
         // if the index is the index of the UART program
-        if (p->pid == UART_USER_PID) {
-            map_user_uart((pagetable_t *)p->root_pt);
-        }
+        // if (p->pid == UART_USER_PID) {
+        //     map_user_uart((pagetable_t *)p->root_pt);
+        // }
 
         // If succeed loading the elf file
         if (load_elf_header(elf, program->elf_start, i, p->root_pt) == 0) {
@@ -160,7 +158,7 @@ static void main_hart_kernel(void)
     release_hart(1);
 
     // The main hart runs the user programs.
-    timer_init();
+    // timer_init();
     scheduler();
 }
 
@@ -186,8 +184,10 @@ void kernel_main(uint64_t hart_id)
     uart_putline("");
     
     if (hart_id == MAIN_HARTID) {
+        uart_putline("Uppp");
         main_hart_kernel();
     } else {
+        uart_putline("Down");
         secondary_hart_kernel(hart_id);
     }
 

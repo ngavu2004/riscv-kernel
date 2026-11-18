@@ -36,7 +36,8 @@ void hart_boot(void) {
 
     // Permit S-mode timer access on every hart.
     set_stce(1);
-    enable_supervisor_time_counter();
+    // enable_supervisor_time_counter();
+    // enable_timer_machine_interrupt();
 
     // switch to kernel root table
     switch_page_table(kernel_root_pt);
@@ -59,7 +60,7 @@ void hart_boot(void) {
     // Keep the per-hart stack selected by boot.S.
     hart->stack_pointer = read_sp();
 
-    uart_putstr("\n==== Finshed booting! Jumping to the kernel! ====\n\r");
+    uart_putstr("\r\n==== Finshed booting! Jumping to the kernel! ====\r\n");
 
     // set address to kernel entry in S-mode
     uart_put_debug("Writing mepc...");
